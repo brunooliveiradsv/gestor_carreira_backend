@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../gestor-carreira-frontend"
+		}
+	],
+	"settings": {
+		"git.ignoreLimitWarning": true
+	}
+}
