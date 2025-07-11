@@ -1,12 +1,16 @@
 // src/config/database.js
+require('dotenv').config(); // Permite usar variáveis de ambiente
 module.exports = {
   dialect: 'postgres',
-  host: 'localhost',
-  username: 'postgres',
-  password: '4682', // <<< LEMBRE-SE DE COLOCAR SUA SENHA AQUI
-  database: 'gestor_carreira',
+  url: process.env.DATABASE_URL, // Vai ler a URL do Render
   define: {
     timestamps: true,
     underscored: true,
   },
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false // Necessário para a conexão no Render
+    }
+  }
 };
