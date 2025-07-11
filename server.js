@@ -47,7 +47,7 @@ app.use('/api/notificacoes', notificacaoRotas(conexao));
 const equipamentoRotas = require('./src/rotas/equipamento.rotas.js');
 app.use('/api/equipamentos', equipamentoRotas(conexao));
 
-const PORTA = 3000;
+const PORTA = process.env.PORT || 3000;
 app.listen(PORTA, () => {
   console.log(`Servidor rodando na porta ${PORTA}`);
 });
