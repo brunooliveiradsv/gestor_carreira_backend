@@ -1,8 +1,9 @@
 // src/config/database.js
-require('dotenv').config(); 
+require('dotenv').config();
+
 module.exports = {
   dialect: 'postgres',
-  url: process.env.DATABASE_URL, // Correto, usa a variável do Render
+  url: process.env.DATABASE_URL,
   define: {
     timestamps: true,
     underscored: true,
@@ -10,7 +11,7 @@ module.exports = {
   dialectOptions: {
     ssl: {
       require: true,
-      rejectUnauthorized: false // Necessário para a conexão no Render
+      rejectUnauthorized: false // Esta linha é essencial para o Render
     }
   }
 };
