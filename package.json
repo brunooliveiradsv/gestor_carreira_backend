@@ -5,7 +5,6 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon server.js",
-    "postinstall": "npx sequelize-cli db:migrate --url \"$DATABASE_URL\" && npx sequelize-cli db:seed:all --url \"$DATABASE_URL\""
   },
   "keywords": [],
   "author": "",
