@@ -13,8 +13,5 @@ module.exports = {
       require: true,
       rejectUnauthorized: false
     },
-    // --- NOVA LINHA PARA FORÇAR O USO DE IPv4 ---
-    family: 4
-    // -----------------------------------------
   }
 };
