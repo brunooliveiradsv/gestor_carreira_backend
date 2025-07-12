@@ -1,4 +1,6 @@
 // server.js
+console.log('--- INICIANDO TESTE DE DEBUG ---');
+console.log(`[DEBUG] DATABASE_URL no arranque: ${process.env.DATABASE_URL}`);
 const express = require("express");
 const conexao = require("./src/database");
 const cors = require("cors");
