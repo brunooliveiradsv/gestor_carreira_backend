@@ -1,56 +1,65 @@
 // server.js
 const express = require("express");
 const conexao = require("./src/database");
-const cors = require("cors"); // <-- 1. IMPORTE O PACOTE
+const cors = require("cors");
 
 const app = express();
-// --- NOVA CONFIGURAÇÃO DO CORS ---
+
+// Configuração do CORS para permitir o acesso do seu frontend
 const corsOptions = {
-  origin: 'https://gestor-carreira-frontend.vercel.app', // Apenas seu frontend pode acessar
-  optionsSuccessStatus: 200 // Para compatibilidade com navegadores mais antigos
+  origin: 'https://gestor-carreira-frontend.vercel.app',
+  optionsSuccessStatus: 200
 };
+
 app.use(cors(corsOptions));
-// Importamos o nosso arquivo de rotas
+app.use(express.json());
+
+// Importação de todas as rotas da sua API
 const usuarioRotas = require("./src/rotas/usuario.rotas.js");
-
-// Isso garante que o controlador terá acesso aos modelos inicializados.
-app.use("/api/usuarios", usuarioRotas(conexao));
-
-// Rotas de Compromisso
 const compromissoRotas = require("./src/rotas/compromisso.rotas.js");
-app.use("/api/compromissos", compromissoRotas(conexao));
-
-// Rotas Financeiras
 const financeiroRotas = require("./src/rotas/financeiro.rotas.js");
-app.use("/api/financeiro", financeiroRotas(conexao));
-
-// Rotas de Contatos
 const contatoRotas = require("./src/rotas/contato.rotas.js");
-app.use("/api/contatos", contatoRotas(conexao));
-
-// Rotas de Repertório
 const repertorioRotas = require("./src/rotas/repertorio.rotas.js");
-app.use("/api/repertorios", repertorioRotas(conexao));
-
-// --- GARANTA QUE ESTAS DUAS LINHAS ESTÃO PRESENTES E CORRETAS ---
 const conquistaRotas = require('./src/rotas/conquista.rotas.js');
-app.use('/api/conquistas', conquistaRotas(conexao));
-
-// Rotas de Administração
 const adminRotas = require("./src/rotas/admin.rotas.js");
-app.use("/api/admin", adminRotas(conexao));
-
-const tarefasAgendadas = require('./src/tarefas-agendadas');
-tarefasAgendadas.iniciarTarefas(conexao);
-
-// --- LINHA NOVA ---
 const notificacaoRotas = require('./src/rotas/notificacao.rotas.js');
-app.use('/api/notificacoes', notificacaoRotas(conexao));
-
 const equipamentoRotas = require('./src/rotas/equipamento.rotas.js');
+const tarefasAgendadas = require('./src/tarefas-agendadas');
+
+// Registro de todas as rotas da API
+app.use("/api/usuarios", usuarioRotas(conexao));
+app.use("/api/compromissos", compromissoRotas(conexao));
+app.use("/api/financeiro", financeiroRotas(conexao));
+app.use("/api/contatos", contatoRotas(conexao));
+app.use("/api/repertorios", repertorioRotas(conexao));
+app.use('/api/conquistas', conquistaRotas(conexao));
+app.use("/api/admin", adminRotas(conexao));
+app.use('/api/notificacoes', notificacaoRotas(conexao));
 app.use('/api/equipamentos', equipamentoRotas(conexao));
 
 const PORTA = process.env.PORT || 3000;
-app.listen(PORTA, () => {
-  console.log(`Servidor rodando na porta ${PORTA}`);
-});
+
+// Função assíncrona para iniciar o servidor de forma segura
+async function iniciarServidor() {
+  try {
+    // 1. Tenta autenticar a conexão com o banco de dados
+    await conexao.authenticate();
+    console.log('✅ Conexão com o banco de dados estabelecida com sucesso.');
+
+    // 2. Se a conexão for bem-sucedida, inicia o servidor web
+    app.listen(PORTA, () => {
+      console.log(`🚀 Servidor rodando na porta ${PORTA}`);
+      
+      // 3. Somente após o servidor estar no ar, inicia as tarefas agendadas
+      tarefasAgendadas.iniciarTarefas(conexao);
+    });
+
+  } catch (error) {
+    // Se a conexão falhar, exibe um erro claro e encerra a aplicação
+    console.error('❌ Não foi possível conectar ao banco de dados:', error);
+    process.exit(1); // Encerra o processo com um código de erro
+  }
+}
+
+// Chama a função para iniciar a aplicação
+iniciarServidor();
