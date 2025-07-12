@@ -4,9 +4,12 @@ const conexao = require("./src/database");
 const cors = require("cors"); // <-- 1. IMPORTE O PACOTE
 
 const app = express();
-app.use(cors()); // <-- 2. DIGA AO APP PARA USAR O CORS
-app.use(express.json());
-
+// --- NOVA CONFIGURAÇÃO DO CORS ---
+const corsOptions = {
+  origin: 'https://gestor-carreira-frontend.vercel.app', // Apenas seu frontend pode acessar
+  optionsSuccessStatus: 200 // Para compatibilidade com navegadores mais antigos
+};
+app.use(cors(corsOptions));
 // Importamos o nosso arquivo de rotas
 const usuarioRotas = require("./src/rotas/usuario.rotas.js");
 
