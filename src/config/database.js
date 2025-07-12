@@ -1,13 +1,9 @@
 // src/config/database.js
-// require('dotenv').config(); // Não precisamos disto para o teste
+require('dotenv').config();
 
 module.exports = {
   dialect: 'postgres',
-  
-  // --- TESTE: URL COLOCADA DIRETAMENTE NO CÓDIGO ---
-  url: 'postgresql://admin:a1tNds4uPmlrIH8XZZzkunU4xmtRO2B3@dpg-d1ojed7fte5s73be9c90-a/gestor_carreira',
-  // --------------------------------------------------
-
+  url: process.env.DATABASE_URL, // Voltar a usar a variável de ambiente
   define: {
     timestamps: true,
     underscored: true,
