@@ -1,8 +1,8 @@
 // src/config/database.js
-require('dotenv').config(); // Permite usar variáveis de ambiente
+require('dotenv').config(); 
 module.exports = {
   dialect: 'postgres',
-  url: process.env.DATABASE_URL, // Vai ler a URL do Render
+  url: process.env.DATABASE_URL, // Correto, usa a variável do Render
   define: {
     timestamps: true,
     underscored: true,
