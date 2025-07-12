@@ -1,5 +1,4 @@
 // src/config/database.js
-
 module.exports = {
   dialect: 'postgres',
   url: process.env.DATABASE_URL,
@@ -11,6 +10,6 @@ module.exports = {
     ssl: {
       require: true,
       rejectUnauthorized: false
-    },
+    }
   }
 };
