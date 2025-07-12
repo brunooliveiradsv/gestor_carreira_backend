@@ -3,7 +3,7 @@ require('dotenv').config();
 
 module.exports = {
   dialect: 'postgres',
-  url: process.env.DATABASE_URL, // Voltar a usar a variável de ambiente
+  url: process.env.DATABASE_URL,
   define: {
     timestamps: true,
     underscored: true,
@@ -12,6 +12,9 @@ module.exports = {
     ssl: {
       require: true,
       rejectUnauthorized: false
-    }
+    },
+    // --- NOVA LINHA PARA FORÇAR O USO DE IPv4 ---
+    family: 4
+    // -----------------------------------------
   }
 };
