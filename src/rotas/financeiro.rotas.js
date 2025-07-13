@@ -6,16 +6,17 @@ const authMiddleware = require("../middlewares/autenticacao");
 module.exports = (conexao) => {
   const roteador = express.Router();
 
-  // Esta linha aplica o "segurança" de autenticação a todas as rotas deste arquivo.
-  // Ela garante que 'req.usuario' existirá antes de chamar o controlador.
-    roteador.use(authMiddleware(conexao));
+  roteador.use(authMiddleware(conexao));
 
-  // Rota para listar as transações do usuário logado
+  // --- NOVA ROTA PARA O DASHBOARD ---
+  roteador.get("/resumo-mensal", (req, res) =>
+    financeiroControlador.resumoMensal(req, res, conexao)
+  );
+
   roteador.get("/transacoes", (req, res) =>
     financeiroControlador.listarTransacoes(req, res, conexao)
   );
 
-   // Rota para criar uma nova transação manual
   roteador.post('/transacoes', (req, res) => financeiroControlador.criarTransacao(req, res, conexao));
 
   return roteador;

@@ -1,4 +1,5 @@
 // src/controladores/compromisso.controlador.js
+const { Op } = require("sequelize"); // <<< IMPORTANTE: Adicione esta linha
 const conquistaServico = require("../servicos/conquista.servico.js");
 const compromissoServico = require("../servicos/compromisso.servico.js");
 
@@ -16,7 +17,6 @@ exports.criar = async (req, res, conexao) => {
   } = req.body;
   const usuarioId = req.usuario.id;
 
-  // Trata o valor_cache para garantir que seja nulo se estiver vazio
   const cacheParaSalvar =
     valor_cache === "" || valor_cache === null ? null : valor_cache;
 
@@ -39,7 +39,6 @@ exports.criar = async (req, res, conexao) => {
       conexao
     );
 
-    // Lógica inteligente para verificar se o compromisso foi criado no passado
     if (new Date(novoCompromisso.data) < new Date()) {
       console.log(
         `Compromisso ${novoCompromisso.id} criado no passado. Processando como 'Realizado'.`
@@ -68,7 +67,7 @@ exports.listar = async (req, res, conexao) => {
   try {
     const compromissos = await Compromisso.findAll({
       where: { usuario_id: usuarioId },
-      order: [["data", "DESC"]], // <--- Confirme que está escrito 'DESC' aqui
+      order: [["data", "DESC"]],
     });
     return res.status(200).json(compromissos);
   } catch (erro) {
@@ -118,30 +117,20 @@ exports.atualizar = async (req, res, conexao) => {
       return res.status(404).json({ mensagem: "Compromisso não encontrado ou não pertence ao usuário." });
     }
     
-    // 1. Aplica as novas atualizações enviadas pelo formulário
     await compromisso.update(novosDados);
 
-    // 2. Lógica de Automação
     const dataAtualizada = new Date(compromisso.data);
     const agora = new Date();
     
-    // O gatilho agora roda se:
-    // a) O status foi explicitamente mudado para 'Realizado'
-    // b) OU se a data do evento agora está no passado e o status ainda era 'Agendado'
     if (novosDados.status === 'Realizado' || (dataAtualizada < agora && compromisso.status === 'Agendado')) {
-      
-      // Se entrou aqui por causa da data, força a mudança de status antes de processar
       if (compromisso.status === 'Agendado') {
         await compromisso.update({ status: 'Realizado' });
         console.log(`Compromisso ID ${compromisso.id} atualizado para 'Realizado' por ter data no passado.`);
       }
-      
       compromissoServico.processarCompromissoRealizado(compromisso, conexao);
     }
 
-    // Recarrega os dados do banco para garantir que a resposta tenha os dados mais recentes
     await compromisso.reload();
-
     return res.status(200).json(compromisso);
   } catch (erro) {
     console.error("Erro ao atualizar compromisso:", erro);
@@ -159,21 +148,36 @@ exports.apagar = async (req, res, conexao) => {
       where: { id: idDoCompromisso, usuario_id: usuarioId },
     });
     if (!compromisso) {
-      return res
-        .status(404)
-        .json({
-          mensagem: "Compromisso não encontrado ou não pertence ao usuário.",
-        });
+      return res.status(404).json({ mensagem: "Compromisso não encontrado ou não pertence ao usuário." });
     }
     await compromisso.destroy();
     return res.status(204).send();
   } catch (erro) {
     console.error("Erro ao apagar compromisso:", erro);
-    res
-      .status(400)
-      .json({
-        mensagem: "Erro ao apagar compromisso.",
-        detalhes: erro.message,
-      });
+    res.status(400).json({ mensagem: "Erro ao apagar compromisso.", detalhes: erro.message });
+  }
+};
+
+// --- NOVA FUNÇÃO PARA O DASHBOARD ---
+exports.proximos = async (req, res, conexao) => {
+  const { Compromisso } = conexao.models;
+  const usuarioId = req.usuario.id;
+
+  try {
+    const proximosCompromissos = await Compromisso.findAll({
+      where: {
+        usuario_id: usuarioId,
+        data: {
+          [Op.gte]: new Date() // Op.gte significa "greater than or equal" (maior ou igual a)
+        },
+        status: 'Agendado'
+      },
+      order: [['data', 'ASC']], // Ordena do mais próximo para o mais distante
+      limit: 5 // Limita aos próximos 5
+    });
+    return res.status(200).json(proximosCompromissos);
+  } catch (erro) {
+    console.error("Erro ao listar próximos compromissos:", erro);
+    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
   }
 };
