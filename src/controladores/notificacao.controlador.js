@@ -32,6 +32,23 @@ exports.marcarComoLida = async (req, res, conexao) => {
   }
 };
 
+exports.marcarTodasComoLidas = async (req, res, conexao) => {
+  const { Notificacao } = conexao.models;
+  const usuarioId = req.usuario.id; // Vem do middleware de autenticação
+
+  try {
+    // Atualiza todas as notificações do usuário logado que não estão lidas
+    await Notificacao.update(
+      { lida: true },
+      { where: { usuario_id: usuarioId, lida: false } }
+    );
+    return res.status(200).json({ mensagem: "Todas as notificações marcadas como lidas." });
+  } catch (erro) {
+    console.error("Erro ao marcar todas as notificações como lidas no DB:", erro);
+    return res.status(500).json({ mensagem: "Ocorreu um erro ao marcar todas as notificações como lidas." });
+  }
+};
+
 exports.apagar = async (req, res, conexao) => {
   const { Notificacao } = conexao.models;
   const { id } = req.params;
