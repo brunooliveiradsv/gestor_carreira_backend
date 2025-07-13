@@ -1,6 +1,8 @@
 // src/controladores/usuario.controlador.js
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto'); // Módulo nativo do Node.js para criptografia
+const emailServico = require('../servicos/email.servico'); // Nosso novo serviço de e-mail
 
 exports.registrar = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
@@ -81,6 +83,49 @@ exports.login = async (req, res, conexao) => {
   }
 };
 
+// --- FUNÇÃO NOVA: RECUPERAR SENHA ---
+exports.recuperarSenha = async (req, res, conexao) => {
+  const { Usuario } = conexao.models;
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ mensagem: 'O e-mail é obrigatório para a recuperação de senha.' });
+  }
+
+  try {
+    const usuario = await Usuario.findOne({ where: { email } });
+
+    // Mesmo que o usuário não exista, retornamos uma mensagem de sucesso
+    // para não dar pistas a possíveis atacantes se um e-mail está cadastrado ou não.
+    if (!usuario) {
+      return res.status(200).json({ mensagem: 'Se um usuário com este e-mail existir, um link de recuperação foi enviado.' });
+    }
+
+    // Gera uma nova senha aleatória de 8 caracteres
+    const novaSenha = crypto.randomBytes(4).toString('hex');
+    const senhaCriptografada = bcrypt.hashSync(novaSenha, 10);
+
+    // Atualiza o usuário com a nova senha
+    await usuario.update({ senha: senhaCriptografada });
+
+    // Envia o e-mail para o usuário
+    const emailEnviado = await emailServico.enviarEmailDeRecuperacao(email, novaSenha);
+
+    if (!emailEnviado) {
+      // Se o e-mail falhar, não devemos travar o processo para o usuário.
+      // A senha foi alterada, mas o ideal é logar o erro para a administração verificar.
+      console.error(`A senha do usuário ${email} foi redefinida, mas o e-mail de notificação falhou.`);
+    }
+
+    return res.status(200).json({ mensagem: 'Se um usuário com este e-mail existir, um e-mail de recuperação foi enviado.' });
+
+  } catch (erro) {
+    console.error("Erro no processo de recuperação de senha:", erro);
+    return res.status(500).json({ mensagem: 'Ocorreu um erro interno no servidor.' });
+  }
+};
+
+
 exports.buscarPerfil = async (req, res, conexao) => {
   // req.usuario é definido pelo authMiddleware e contém o objeto do usuário autenticado
   // Garante que a senha não seja enviada na resposta
@@ -128,6 +173,10 @@ exports.atualizarSenha = async (req, res, conexao) => {
 
   if (!senhaAtual || !novaSenha) {
     return res.status(400).json({ mensagem: "A senha atual e a nova senha são obrigatórias." });
+  }
+
+  if (novaSenha.length < 8) {
+    return res.status(400).json({ mensagem: "A nova senha deve ter no mínimo 8 caracteres." });
   }
 
   try {

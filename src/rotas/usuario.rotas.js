@@ -9,6 +9,8 @@ module.exports = (conexao) => {
   // Rotas públicas (não exigem autenticação)
   roteador.post('/registrar', (req, res) => usuarioControlador.registrar(req, res, conexao));
   roteador.post('/login', (req, res) => usuarioControlador.login(req, res, conexao));
+  // --- NOVA ROTA DE RECUPERAÇÃO DE SENHA ---
+  roteador.post('/recuperar-senha', (req, res) => usuarioControlador.recuperarSenha(req, res, conexao));
 
   // Rotas privadas (exigem autenticação via authMiddleware)
   roteador.get('/perfil', authMiddleware(conexao), (req, res) => usuarioControlador.buscarPerfil(req, res, conexao));
