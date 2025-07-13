@@ -9,7 +9,7 @@ const app = express();
 
 // Configuração do CORS para permitir o acesso do seu frontend
 const corsOptions = {
-  origin: 'https://gestor-carreira-frontend.vercel.app',
+  origin: 'https://voxgest.vercel.app',
   optionsSuccessStatus: 200
 };
 
