@@ -23,7 +23,7 @@ exports.listarTransacoes = async (req, res, conexao) => {
 exports.criarTransacao = async (req, res, conexao) => {
   const { Transacao } = conexao.models;
   // CORREÇÃO: Adicionamos 'categoria' à lista de dados lidos do corpo
-  const { descricao, valor, tipo, data, categoria } = req.body;
+  const { descricao, valor, tipo, data, categoria, compromisso_id } = req.body;
   const usuarioId = req.usuario.id;
 
   if (!descricao || !valor || !tipo || !data) {
@@ -42,6 +42,7 @@ exports.criarTransacao = async (req, res, conexao) => {
       tipo,
       data,
       categoria, // Salva a categoria no banco de dados
+      compromisso_id: compromisso_id || null,
       usuario_id: usuarioId,
     });
 
@@ -53,6 +54,14 @@ exports.criarTransacao = async (req, res, conexao) => {
         "PRIMEIRA_DESPESA_EQUIPAMENTO",
         conexao
       );
+    }
+
+     if (tipo === "receita" && compromisso_id) { // Se for receita E tiver compromisso_id
+        conquistaServico.verificarEConcederConquistas(
+            usuarioId,
+            "PRIMEIRA_RECEITA_SHOW", // O nome da sua tipo_condicao da conquista
+            conexao
+        );
     }
 
     return res.status(201).json(novaTransacao);

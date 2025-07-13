@@ -8,7 +8,8 @@ class Transacao extends Model {
         valor: DataTypes.DECIMAL,
         tipo: DataTypes.ENUM("receita", "despesa"),
         data: DataTypes.DATE,
-        categoria: DataTypes.STRING, // <-- GARANTA QUE ESTA LINHA EXISTE
+        categoria: DataTypes.STRING,
+        compromisso_id: DataTypes.INTEGER, // <-- ADICIONE ESTA LINHA
       },
       {
         sequelize,
@@ -17,7 +18,9 @@ class Transacao extends Model {
     );
   }
   static associate(models) {
-    /* ... */
+    // Adicione a associação com Compromisso
+    this.belongsTo(models.Compromisso, { foreignKey: 'compromisso_id', as: 'compromisso' });
+    this.belongsTo(models.Usuario, { foreignKey: 'usuario_id', as: 'usuario' }); // Garanta que esta associação também existe
   }
 }
 module.exports = Transacao;
