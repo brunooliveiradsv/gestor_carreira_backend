@@ -23,9 +23,9 @@ exports.enviarEmailDeRecuperacao = async (emailDestinatario, novaSenha) => {
 
   try {
     const info = await transportador.sendMail({
-      from: `"Gestor de Carreira" <${process.env.EMAIL_USER}>`,
+      from: `"VOXGest" <${process.env.EMAIL_USER}>`,
       to: emailDestinatario,
-      subject: 'Recuperação de Senha - Gestor de Carreira',
+      subject: 'Recuperação de Senha - VOXGest',
       html: `
         <h1>Recuperação de Senha</h1>
         <p>Olá,</p>
@@ -34,7 +34,7 @@ exports.enviarEmailDeRecuperacao = async (emailDestinatario, novaSenha) => {
           ${novaSenha}
         </p>
         <p>Recomendamos que você altere esta senha após fazer o login por uma de sua preferência.</p>
-        <p>Atenciosamente,<br>Equipe Gestor de Carreira</p>
+        <p>Atenciosamente,<br>Equipe VOXGest | Gestor de Carreira </p>
       `,
     });
 
