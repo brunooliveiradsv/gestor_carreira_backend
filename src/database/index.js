@@ -33,6 +33,8 @@ Transacao.associate(conexao.models);
 Contato.associate(conexao.models);
 Repertorio.associate(conexao.models);
 Conquista.associate(conexao.models);
+// --- ADICIONE ESTA LINHA ---
+UsuarioConquista.associate(conexao.models); // Garante que as associações do novo modelo sejam chamadas
 Notificacao.associate(conexao.models);
 Equipamento.associate(conexao.models);
 
