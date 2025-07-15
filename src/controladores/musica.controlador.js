@@ -1,7 +1,9 @@
 // src/controladores/musica.controlador.js
 const { Op } = require('sequelize');
-const axios = require('axios'); // <-- LINHA ADICIONADA
+const axios = require('axios');
 const cheerio = require('cheerio');
+
+// ... (as outras funções como criar, listar, etc., permanecem exatamente iguais)
 
 exports.criar = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
@@ -30,7 +32,7 @@ exports.criar = async (req, res, conexao) => {
       }
       await novaMusica.setTags(tagsParaAssociar, { transaction: t });
     }
-    
+
     await t.commit();
     const musicaCompleta = await Musica.findByPk(novaMusica.id, { include: 'tags' });
     return res.status(201).json(musicaCompleta);
@@ -91,23 +93,23 @@ exports.listar = async (req, res, conexao) => {
 };
 
 exports.buscarPorId = async (req, res, conexao) => {
-    const { Musica, Tag } = conexao.models;
-    const { id } = req.params;
-    const usuarioId = req.usuario.id;
+  const { Musica, Tag } = conexao.models;
+  const { id } = req.params;
+  const usuarioId = req.usuario.id;
 
-    try {
-        const musica = await Musica.findOne({
-            where: { id, usuario_id: usuarioId },
-            include: [{ model: Tag, as: 'tags' }]
-        });
+  try {
+    const musica = await Musica.findOne({
+      where: { id, usuario_id: usuarioId },
+      include: [{ model: Tag, as: 'tags' }]
+    });
 
-        if (!musica) {
-            return res.status(404).json({ mensagem: "Música não encontrada." });
-        }
-        return res.status(200).json(musica);
-    } catch (erro) {
-        return res.status(500).json({ mensagem: "Erro ao buscar a música." });
+    if (!musica) {
+      return res.status(404).json({ mensagem: "Música não encontrada." });
     }
+    return res.status(200).json(musica);
+  } catch (erro) {
+    return res.status(500).json({ mensagem: "Erro ao buscar a música." });
+  }
 };
 
 exports.atualizar = async (req, res, conexao) => {
@@ -166,29 +168,30 @@ exports.apagar = async (req, res, conexao) => {
 };
 
 exports.tocarMusica = async (req, res, conexao) => {
-    const { Musica } = conexao.models;
-    const { id } = req.params;
-    const usuarioId = req.usuario.id;
-    
-    try {
-        const musica = await Musica.findOne({ where: { id, usuario_id: usuarioId } });
-        if (!musica) {
-            return res.status(404).json({ mensagem: "Música não encontrada." });
-        }
-        
-        await musica.update({
-            ultima_vez_tocada: new Date(),
-            popularidade: musica.popularidade + 1
-        });
-        
-        return res.status(200).json(musica);
+  const { Musica } = conexao.models;
+  const { id } = req.params;
+  const usuarioId = req.usuario.id;
 
-    } catch(erro) {
-        console.error("Erro ao registrar 'tocar música':", erro);
-        return res.status(500).json({ mensagem: "Erro ao registrar a ação." });
+  try {
+    const musica = await Musica.findOne({ where: { id, usuario_id: usuarioId } });
+    if (!musica) {
+      return res.status(404).json({ mensagem: "Música não encontrada." });
     }
+
+    await musica.update({
+      ultima_vez_tocada: new Date(),
+      popularidade: musica.popularidade + 1
+    });
+
+    return res.status(200).json(musica);
+
+  } catch (erro) {
+    console.error("Erro ao registrar 'tocar música':", erro);
+    return res.status(500).json({ mensagem: "Erro ao registrar a ação." });
+  }
 }
 
+// --- FUNÇÃO RASPARCIFRA ATUALIZADA E MAIS ROBUSTA ---
 exports.rasparCifra = async (req, res) => {
   let { url } = req.body;
 
@@ -204,9 +207,18 @@ exports.rasparCifra = async (req, res) => {
     const { data } = await axios.get(url);
     const $ = cheerio.load(data);
 
-    // --- SELETORES ATUALIZADOS ---
-    const nome = $('.g-1 > h1.g-4').text().trim();
-    const artista = $('.g-1 > h2.g-4 > a').text().trim();
+    // Tentativa 1: Seletores mais modernos
+    let nome = $('.g-1 > h1.g-4').text().trim();
+    let artista = $('.g-1 > h2.g-4 > a').text().trim();
+    
+    // Tentativa 2: Seletores de reserva (fallback) caso os primeiros falhem
+    if (!nome) {
+        nome = $('h1.t1').text().trim();
+    }
+    if (!artista) {
+        artista = $('h2.t3').text().trim();
+    }
+
     const tom = $('#cifra_tom').text().trim();
     const cifraHtml = $('pre').html();
 
@@ -214,7 +226,6 @@ exports.rasparCifra = async (req, res) => {
       return res.status(404).json({ mensagem: "Não foi possível encontrar os dados da cifra na página. O layout do site pode ter mudado." });
     }
 
-    // Limpeza do HTML da cifra para converter para texto simples
     const cifraComQuebrasDeLinha = cifraHtml.replace(/<br\s*\/?>/gi, '\n');
     const $temp = cheerio.load(cifraComQuebrasDeLinha);
     const cifraLimpa = $temp.text();
