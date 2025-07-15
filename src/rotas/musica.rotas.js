@@ -8,33 +8,21 @@ module.exports = (conexao) => {
   roteador.use(authMiddleware(conexao));
 
   // --- Rotas Gerais (sem parâmetros na URL) ---
-  // Estas rotas são mais específicas e devem vir primeiro.
+  // Estas rotas são mais específicas e vêm primeiro.
   
-  // Lista todas as músicas com filtros
   roteador.get('/', (req, res) => musicaControlador.listar(req, res, conexao));
-  
-  // Cria uma nova música
   roteador.post('/', (req, res) => musicaControlador.criar(req, res, conexao));
-  
-  // Rota específica para raspagem a partir de um URL
   roteador.post('/raspar-cifra', (req, res) => musicaControlador.rasparCifra(req, res, conexao));
 
-  // Rota específica para a busca inteligente
+  // --- ROTA FALTANDO ADICIONADA AQUI ---
   roteador.post('/busca-inteligente', (req, res) => musicaControlador.buscaInteligente(req, res, conexao));
-
+  
   // --- Rotas Específicas (com o parâmetro /:id) ---
   // O Express só chegará a estas rotas se o caminho não corresponder às de cima.
   
-  // Busca uma música específica por ID
   roteador.get('/:id', (req, res) => musicaControlador.buscarPorId(req, res, conexao));
-  
-  // Atualiza uma música específica
   roteador.put('/:id', (req, res) => musicaControlador.atualizar(req, res, conexao));
-  
-  // Apaga uma música específica
   roteador.delete('/:id', (req, res) => musicaControlador.apagar(req, res, conexao));
-
-  // Registra que uma música foi tocada
   roteador.post('/:id/tocar', (req, res) => musicaControlador.tocarMusica(req, res, conexao));
 
   return roteador;
