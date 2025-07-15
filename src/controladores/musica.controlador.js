@@ -190,33 +190,34 @@ exports.tocarMusica = async (req, res, conexao) => {
 }
 
 exports.rasparCifra = async (req, res) => {
-  let { url } = req.body; // Usa 'let' para poder modificar a variável
+  let { url } = req.body;
 
   if (!url || !url.includes('cifraclub.com.br')) {
     return res.status(400).json({ mensagem: "URL do Cifra Club inválida ou não fornecida." });
   }
 
-  // **INÍCIO DA CORREÇÃO**
-  // Verifica se o URL começa com http:// ou https://. Se não, adiciona https://
   if (!/^https?:\/\//i.test(url)) {
     url = 'https://' + url;
   }
-  // **FIM DA CORREÇÃO**
 
   try {
     const { data } = await axios.get(url);
     const $ = cheerio.load(data);
 
-    const nome = $('h1.t1').text().trim();
-    const artista = $('h2.t3').text().trim();
+    // --- SELETORES ATUALIZADOS ---
+    const nome = $('.g-1 > h1.g-4').text().trim();
+    const artista = $('.g-1 > h2.g-4 > a').text().trim();
     const tom = $('#cifra_tom').text().trim();
-    const cifra = $('pre#cifra_tab').html();
+    const cifraHtml = $('pre').html();
 
-    if (!nome || !artista || !cifra) {
+    if (!nome || !artista || !cifraHtml) {
       return res.status(404).json({ mensagem: "Não foi possível encontrar os dados da cifra na página. O layout do site pode ter mudado." });
     }
-    
-    const cifraLimpa = cifra.replace(/<\/?b>/g, '').replace(/<a[^>]*>|<\/a>/g, '');
+
+    // Limpeza do HTML da cifra para converter para texto simples
+    const cifraComQuebrasDeLinha = cifraHtml.replace(/<br\s*\/?>/gi, '\n');
+    const $temp = cheerio.load(cifraComQuebrasDeLinha);
+    const cifraLimpa = $temp.text();
 
     return res.status(200).json({
       nome,
