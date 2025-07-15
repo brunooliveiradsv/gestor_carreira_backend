@@ -232,78 +232,111 @@ exports.buscaInteligente = async (req, res) => {
       .json({ mensagem: "Nome da música e do artista são necessários." });
   }
 
-  const termoBusca = encodeURIComponent(`${nomeMusica} ${nomeArtista}`);
-  const urlBusca = `https://www.cifraclub.com.br/search/?q=${termoBusca}`;
-
   try {
-    console.log(`[Busca Inteligente] Buscando URL: ${urlBusca}`);
-    const { data } = await axios.get(urlBusca);
-    const $ = cheerio.load(data);
+    console.log(
+      `[Detetive Musical] Iniciando busca para: ${nomeMusica} - ${nomeArtista}`
+    );
 
-    let linkEncontrado = null;
+    // --- PARTE 1: BUSCAR A CIFRA NO CIFRA CLUB ---
+    const termoBuscaCifra = encodeURIComponent(`${nomeMusica} ${nomeArtista}`);
+    const urlBuscaCifra = `https://www.cifraclub.com.br/search/?q=${termoBuscaCifra}`;
 
-    // **NOVA LÓGICA DE BUSCA**
-    // Procura por todos os links na área de resultados
-    $(".gsc-webResult.gsc-result a.gs-title").each((i, el) => {
-      const href = $(el).attr("href");
-      // Procura pelo primeiro link que não seja um link de "videoaulas"
-      if (
-        href &&
-        href.includes("cifraclub.com.br") &&
-        !href.includes("/videoaulas/")
-      ) {
-        linkEncontrado = href;
-        return false; // Interrompe o loop 'each' assim que encontrar o primeiro link válido
+    let dadosCifra = {};
+
+    try {
+      const { data: dataBuscaCifra } = await axios.get(urlBuscaCifra);
+      const $buscaCifra = cheerio.load(dataBuscaCifra);
+      const linkCifra = $buscaCifra(".gsc-webResult.gsc-result a.gs-title")
+        .first()
+        .attr("href");
+
+      if (linkCifra) {
+        console.log(`[Detetive Musical] Cifra encontrada em: ${linkCifra}`);
+        const { data: dataPaginaCifra } = await axios.get(linkCifra);
+        const $paginaCifra = cheerio.load(dataPaginaCifra);
+        const cifraHtml = $paginaCifra("pre").html();
+        if (cifraHtml) {
+          const cifraComQuebrasDeLinha = cifraHtml.replace(
+            /<br\s*\/?>/gi,
+            "\n"
+          );
+          const $temp = cheerio.load(cifraComQuebrasDeLinha);
+          dadosCifra.notas_adicionais = $temp.text();
+          dadosCifra.tom = $paginaCifra("#cifra_tom").text().trim();
+        }
       }
-    });
-
-    if (linkEncontrado) {
-      console.log(`[Busca Inteligente] Link encontrado: ${linkEncontrado}`);
-
-      // O resto da lógica para raspar a página da cifra permanece o mesmo
-      const { data: dataCifra } = await axios.get(linkEncontrado);
-      const $cifra = cheerio.load(dataCifra);
-
-      let nome =
-        $cifra(".g-1 > h1.g-4").text().trim() || $cifra("h1.t1").text().trim();
-      let artista =
-        $cifra(".g-1 > h2.g-4 > a").text().trim() ||
-        $cifra("h2.t3").text().trim();
-      const tom = $cifra("#cifra_tom").text().trim();
-      const cifraHtml = $cifra("pre").html();
-
-      if (!cifraHtml) {
-        return res
-          .status(404)
-          .json({
-            mensagem: "Não foi possível extrair a cifra da página encontrada.",
-          });
-      }
-
-      const cifraComQuebrasDeLinha = cifraHtml.replace(/<br\s*\/?>/gi, "\n");
-      const $temp = cheerio.load(cifraComQuebrasDeLinha);
-      const cifraLimpa = $temp.text();
-
-      return res.status(200).json({
-        nome: nome,
-        artista: artista,
-        tom: tom,
-        notas_adicionais: cifraLimpa,
-      });
-    } else {
-      console.log(
-        "[Busca Inteligente] Nenhum resultado válido encontrado com a nova lógica."
+    } catch (erroCifra) {
+      console.error(
+        "[Detetive Musical] Erro ao buscar no Cifra Club. Continuando mesmo assim.",
+        erroCifra.message
       );
-      return res
-        .status(404)
-        .json({
-          mensagem: "Nenhuma cifra encontrada para esta música no Cifra Club.",
-        });
     }
+
+    // --- PARTE 2: BUSCAR DADOS TÉCNICOS NO TUNEBAT ---
+    const termoBuscaTecnica = encodeURIComponent(
+      `${nomeArtista} ${nomeMusica}`
+    );
+    const urlBuscaTecnica = `https://tunebat.com/Search?q=${termoBuscaTecnica}`;
+
+    let dadosTecnicos = {};
+
+    try {
+      const { data: dataBuscaTecnica } = await axios.get(urlBuscaTecnica);
+      const $buscaTecnica = cheerio.load(dataBuscaTecnica);
+      // Encontra o primeiro resultado de busca e pega o link
+      const linkPaginaMusica = $buscaTecnica(".main-well a.search-track-name")
+        .first()
+        .attr("href");
+
+      if (linkPaginaMusica) {
+        const urlCompletaMusica = `https://tunebat.com${linkPaginaMusica}`;
+        console.log(
+          `[Detetive Musical] Dados técnicos encontrados em: ${urlCompletaMusica}`
+        );
+
+        const { data: dataPaginaMusica } = await axios.get(urlCompletaMusica);
+        const $paginaMusica = cheerio.load(dataPaginaMusica);
+
+        // Extrai os dados específicos da página da música
+        $paginaMusica(".info-box-value").each(function (i, elem) {
+          const valor = $(elem).text().trim();
+          const tipo = $(elem).prev(".info-box-key").text().trim();
+          if (tipo.includes("Key")) dadosTecnicos.tom_alternativo = valor;
+          if (tipo.includes("BPM")) dadosTecnicos.bpm = parseInt(valor, 10);
+          if (tipo.includes("Duration")) {
+            const partes = valor.split(":");
+            if (partes.length === 2) {
+              dadosTecnicos.duracao_segundos =
+                parseInt(partes[0], 10) * 60 + parseInt(partes[1], 10);
+            }
+          }
+        });
+      }
+    } catch (erroTecnico) {
+      console.error(
+        "[Detetive Musical] Erro ao buscar no TuneBat. Continuando mesmo assim.",
+        erroTecnico.message
+      );
+    }
+
+    // --- PARTE 3: CONSOLIDAR E DEVOLVER O RELATÓRIO FINAL ---
+    const resultadoFinal = {
+      nome: nomeMusica,
+      artista: nomeArtista,
+      tom: dadosCifra.tom || dadosTecnicos.tom_alternativo || "",
+      notas_adicionais: dadosCifra.notas_adicionais || "Cifra não encontrada.",
+      bpm: dadosTecnicos.bpm || null,
+      duracao_segundos: dadosTecnicos.duracao_segundos || null,
+    };
+
+    console.log("[Detetive Musical] Relatório final:", resultadoFinal);
+    return res.status(200).json(resultadoFinal);
   } catch (erro) {
-    console.error("Erro na busca inteligente:", erro);
+    console.error("Erro geral na busca inteligente:", erro);
     return res
       .status(500)
-      .json({ mensagem: "Erro ao realizar a busca no Cifra Club." });
+      .json({
+        mensagem: "Ocorreu um erro geral ao buscar os dados da música.",
+      });
   }
 };
