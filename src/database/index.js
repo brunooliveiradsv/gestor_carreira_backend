@@ -44,5 +44,7 @@ Equipamento.associate(conexao.models);
 Musica.associate(conexao.models);
 Tag.associate(conexao.models);
 Setlist.associate(conexao.models);
+SetlistMusica.associate(conexao.models);
+
 
 module.exports = conexao;
