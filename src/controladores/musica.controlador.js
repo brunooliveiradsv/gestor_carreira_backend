@@ -223,7 +223,7 @@ exports.tocarMusica = async (req, res, conexao) => {
   }
 };
 
-// --- FUNÇÃO BUSCAINTELIGENTE COM O SELETOR CORRIGIDO ---
+// --- FUNÇÃO BUSCAINTELIGENTE MAIS ROBUSTA ---
 exports.buscaInteligente = async (req, res) => {
   const { nomeMusica, nomeArtista } = req.body;
   if (!nomeMusica || !nomeArtista) {
@@ -240,16 +240,28 @@ exports.buscaInteligente = async (req, res) => {
     const { data } = await axios.get(urlBusca);
     const $ = cheerio.load(data);
 
-    // **SELETOR ATUALIZADO**
-    const primeiroResultado = $(".gsc-results .gsc-webResult .gs-title a")
-      .first()
-      .attr("href");
+    let linkEncontrado = null;
 
-    if (primeiroResultado) {
-      console.log(`[Busca Inteligente] Link encontrado: ${primeiroResultado}`);
+    // **NOVA LÓGICA DE BUSCA**
+    // Procura por todos os links na área de resultados
+    $(".gsc-webResult.gsc-result a.gs-title").each((i, el) => {
+      const href = $(el).attr("href");
+      // Procura pelo primeiro link que não seja um link de "videoaulas"
+      if (
+        href &&
+        href.includes("cifraclub.com.br") &&
+        !href.includes("/videoaulas/")
+      ) {
+        linkEncontrado = href;
+        return false; // Interrompe o loop 'each' assim que encontrar o primeiro link válido
+      }
+    });
+
+    if (linkEncontrado) {
+      console.log(`[Busca Inteligente] Link encontrado: ${linkEncontrado}`);
 
       // O resto da lógica para raspar a página da cifra permanece o mesmo
-      const { data: dataCifra } = await axios.get(primeiroResultado);
+      const { data: dataCifra } = await axios.get(linkEncontrado);
       const $cifra = cheerio.load(dataCifra);
 
       let nome =
@@ -280,7 +292,7 @@ exports.buscaInteligente = async (req, res) => {
       });
     } else {
       console.log(
-        "[Busca Inteligente] Nenhum resultado encontrado com o seletor atual."
+        "[Busca Inteligente] Nenhum resultado válido encontrado com a nova lógica."
       );
       return res
         .status(404)
