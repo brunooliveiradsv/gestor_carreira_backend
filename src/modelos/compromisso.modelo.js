@@ -13,6 +13,9 @@ class Compromisso extends Model {
         status: DataTypes.STRING,
         valor_cache: DataTypes.DECIMAL,
         despesas: DataTypes.JSONB,
+        // O campo da chave estrangeira é definido na migração,
+        // mas o Sequelize precisa de o conhecer.
+        setlist_id: DataTypes.INTEGER 
       },
       {
         sequelize,
@@ -22,9 +25,13 @@ class Compromisso extends Model {
   }
 
   static associate(models) {
+    // Associação com o dono do compromisso
     this.belongsTo(models.Usuario, { foreignKey: "usuario_id", as: "dono" });
-      // Dizendo que um Compromisso pertence a um Repertório
-    this.belongsTo(models.Repertorio, { foreignKey: 'repertorio_id', as: 'repertorio' });
+
+    // --- ASSOCIAÇÃO CORRIGIDA ---
+    // Agora, um Compromisso pertence a um Setlist.
+    // A foreignKey foi renomeada para 'setlist_id' na migração.
+    this.belongsTo(models.Setlist, { foreignKey: 'setlist_id', as: 'setlist' });
   }
 }
 
