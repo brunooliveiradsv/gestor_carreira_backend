@@ -13,6 +13,9 @@ module.exports = (conexao) => {
   
   // Rota para criar uma nova música
   roteador.post('/', (req, res) => musicaControlador.criar(req, res, conexao));
+
+  roteador.post('/raspar-cifra', (req, res) => musicaControlador.rasparCifra(req, res, conexao));
+  // Rota para buscar uma música específica por ID
   
   // Rota para atualizar uma música específica
   roteador.put('/:id', (req, res) => musicaControlador.atualizar(req, res, conexao));

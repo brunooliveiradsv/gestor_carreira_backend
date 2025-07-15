@@ -5,6 +5,8 @@ exports.criar = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const { nome, artista, tom, duracao_segundos, link_cifra, notas_adicionais, tags } = req.body;
   const usuarioId = req.usuario.id;
+  const axios = require('axios');
+  const cheerio = require('cheerio');
 
   if (!nome || !artista) {
     return res.status(400).json({ mensagem: "Nome da música e artista são obrigatórios." });
@@ -191,3 +193,39 @@ exports.tocarMusica = async (req, res, conexao) => {
         return res.status(500).json({ mensagem: "Erro ao registrar a ação." });
     }
 }
+
+exports.rasparCifra = async (req, res) => {
+  const { url } = req.body;
+  if (!url || !url.includes('cifraclub.com.br')) {
+    return res.status(400).json({ mensagem: "URL do Cifra Club inválida ou não fornecida." });
+  }
+
+  try {
+    // 1. Baixa o HTML da página
+    const { data } = await axios.get(url);
+    const $ = cheerio.load(data);
+
+    // 2. Extrai as informações usando seletores de CSS
+    //    (Estes seletores podem precisar de ser ajustados se o Cifra Club mudar o seu site)
+    const nome = $('h1.t1').text().trim();
+    const artista = $('h2.t3').text().trim();
+    const tom = $('#cifra_tom').text().trim();
+    const cifra = $('pre#cifra_tab').html(); // Usamos .html() para manter as tags <b>
+
+    if (!nome || !artista || !cifra) {
+      return res.status(404).json({ mensagem: "Não foi possível encontrar os dados da cifra na página. O layout do site pode ter mudado." });
+    }
+
+    // 3. Devolve os dados extraídos
+    return res.status(200).json({
+      nome,
+      artista,
+      tom,
+      notas_adicionais: cifra ? cifra.replace(/<b>/g, '').replace(/<\/b>/g, '') : '', // Remove as tags <b>
+    });
+
+  } catch (erro) {
+    console.error("Erro ao fazer scraping do Cifra Club:", erro);
+    return res.status(500).json({ mensagem: "Ocorreu um erro ao tentar obter os dados do Cifra Club." });
+  }
+};
