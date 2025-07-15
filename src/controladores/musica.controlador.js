@@ -4,7 +4,6 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 
 // ... (as outras funções como criar, listar, etc., permanecem exatamente iguais)
-// Para manter a resposta focada, elas foram omitidas aqui, mas devem continuar no seu ficheiro.
 exports.criar = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   let {
@@ -224,7 +223,63 @@ exports.tocarMusica = async (req, res, conexao) => {
   }
 };
 
-// --- FUNÇÃO DE BUSCA INTELIGENTE ATUALIZADA ---
+exports.rasparCifra = async (req, res) => {
+  let { url } = req.body;
+
+  if (!url || !url.includes("cifraclub.com.br")) {
+    return res
+      .status(400)
+      .json({ mensagem: "URL do Cifra Club inválida ou não fornecida." });
+  }
+
+  if (!/^https?:\/\//i.test(url)) {
+    url = "https://" + url;
+  }
+
+  try {
+    const { data } = await axios.get(url);
+    const $ = cheerio.load(data);
+
+    let nome = $(".g-1 > h1.g-4").text().trim();
+    let artista = $(".g-1 > h2.g-4 > a").text().trim();
+
+    if (!nome) {
+      nome = $("h1.t1").text().trim();
+    }
+    if (!artista) {
+      artista = $("h2.t3").text().trim();
+    }
+
+    const tom = $("#cifra_tom").text().trim();
+    const cifraHtml = $("pre").html();
+
+    if (!nome || !artista || !cifraHtml) {
+      return res
+        .status(404)
+        .json({
+          mensagem:
+            "Não foi possível encontrar os dados da cifra na página. O layout do site pode ter mudado.",
+        });
+    }
+
+    const cifraComQuebrasDeLinha = cifraHtml.replace(/<br\s*\/?>/gi, "\n");
+    const $temp = cheerio.load(cifraComQuebrasDeLinha);
+    const cifraLimpa = $temp.text();
+
+    return res
+      .status(200)
+      .json({ nome, artista, tom, notas_adicionais: cifraLimpa });
+  } catch (erro) {
+    console.error("Erro ao fazer scraping do Cifra Club:", erro);
+    return res
+      .status(500)
+      .json({
+        mensagem: "Ocorreu um erro ao tentar obter os dados do Cifra Club.",
+      });
+  }
+};
+
+// --- FUNÇÃO BUSCAINTELIGENTE ATUALIZADA ---
 exports.buscaInteligente = async (req, res) => {
   const { nomeMusica, nomeArtista } = req.body;
   if (!nomeMusica || !nomeArtista) {
@@ -233,74 +288,34 @@ exports.buscaInteligente = async (req, res) => {
       .json({ mensagem: "Nome da música e do artista são necessários." });
   }
 
-  try {
-    // ETAPA 1: Buscar o link da cifra no Cifra Club
-    const termoBuscaCifra = encodeURIComponent(`${nomeMusica} ${nomeArtista}`);
-    const urlBuscaCifra = `https://www.cifraclub.com.br/search/?q=${termoBuscaCifra}`;
+  const termoBusca = encodeURIComponent(`${nomeMusica} ${nomeArtista}`);
+  const urlBusca = `https://www.cifraclub.com.br/search/?q=${termoBusca}`;
 
-    const { data: dataBusca } = await axios.get(urlBuscaCifra);
-    const $busca = cheerio.load(dataBusca);
-    const linkCifra = $busca(".gsc-thumbnail-inside a.gs-title")
+  try {
+    const { data } = await axios.get(urlBusca);
+    const $ = cheerio.load(data);
+
+    // --- SELETOR CORRIGIDO E MAIS ESPECÍFICO ---
+    // Agora ele procura pelo primeiro link dentro da lista de resultados de músicas
+    const primeiroResultado = $(
+      "#___gcse_0 .gsc-results-wrapper-visible .gsc-webResult .gsc-result a.gs-title"
+    )
       .first()
       .attr("href");
 
-    if (!linkCifra) {
+    if (primeiroResultado) {
+      return res.status(200).json({ url: primeiroResultado });
+    } else {
       return res
         .status(404)
         .json({
-          mensagem:
-            "Não foi possível encontrar a cifra principal para esta música.",
+          mensagem: "Nenhuma cifra encontrada para esta música no Cifra Club.",
         });
     }
-
-    // ETAPA 2: Raspar os dados da página da cifra encontrada
-    const { data: dataCifra } = await axios.get(linkCifra);
-    const $cifra = cheerio.load(dataCifra);
-
-    let nome = $cifra(".g-1 > h1.g-4").text().trim();
-    let artista = $cifra(".g-1 > h2.g-4 > a").text().trim();
-    if (!nome) {
-      nome = $cifra("h1.t1").text().trim();
-    }
-    if (!artista) {
-      artista = $cifra("h2.t3").text().trim();
-    }
-
-    const tom = $cifra("#cifra_tom").text().trim();
-    const cifraHtml = $cifra("pre").html();
-    const cifraComQuebrasDeLinha = cifraHtml.replace(/<br\s*\/?>/gi, "\n");
-    const $temp = cheerio.load(cifraComQuebrasDeLinha);
-    const cifraLimpa = $temp.text();
-
-    // ETAPA 3 (Simples): Buscar dados técnicos usando a API do Google Search
-    const termoBuscaGoogle = encodeURIComponent(
-      `bpm and key for ${nomeArtista} ${nomeMusica}`
-    );
-    // A utilização de uma API de busca real (como a do Google) seria o ideal.
-    // Por agora, vamos simular uma busca e extrair de sites conhecidos.
-    // Esta é uma implementação simplificada.
-    let bpm = null;
-    let duracao = null;
-
-    // Simulando a busca por BPM em sites como "tunebat" ou "songbpm"
-    // Em um cenário real, você faria uma chamada a uma API de busca ou rasparia a página de resultados.
-    // Por exemplo, uma busca por "Stairway to Heaven Led Zeppelin bpm" retorna resultados claros.
-    // Vamos deixar estes campos como "null" por agora, para serem preenchidos manualmente se não forem encontrados.
-
-    return res.status(200).json({
-      nome: nome || nomeMusica,
-      artista: artista || nomeArtista,
-      tom: tom || "",
-      notas_adicionais: cifraLimpa || "",
-      bpm: bpm, // Campo para o BPM
-      duracao_segundos: duracao, // Campo para a duração
-    });
   } catch (erro) {
     console.error("Erro na busca inteligente:", erro);
     return res
       .status(500)
-      .json({
-        mensagem: "Ocorreu um erro geral ao buscar os dados da música.",
-      });
+      .json({ mensagem: "Erro ao realizar a busca no Cifra Club." });
   }
 };
