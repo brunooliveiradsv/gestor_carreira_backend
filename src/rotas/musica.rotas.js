@@ -7,8 +7,8 @@ module.exports = (conexao) => {
   const roteador = express.Router();
   roteador.use(authMiddleware(conexao));
 
-  // --- Rotas Gerais (sem ID) ---
-  // Estas rotas não têm parâmetros e devem vir primeiro.
+  // --- Rotas Gerais (sem parâmetros na URL) ---
+  // Estas rotas são mais específicas e devem vir primeiro.
   
   // Lista todas as músicas com filtros
   roteador.get('/', (req, res) => musicaControlador.listar(req, res, conexao));
@@ -16,12 +16,15 @@ module.exports = (conexao) => {
   // Cria uma nova música
   roteador.post('/', (req, res) => musicaControlador.criar(req, res, conexao));
   
-  // Rota específica para raspagem (scraping)
+  // Rota específica para raspagem a partir de um URL
   roteador.post('/raspar-cifra', (req, res) => musicaControlador.rasparCifra(req, res, conexao));
-  
-  // --- Rotas Específicas (com /:id) ---
-  // O Express só chegará a estas rotas se o caminho não corresponder às de cima.
 
+  // Rota específica para a busca inteligente
+  roteador.post('/busca-inteligente', (req, res) => musicaControlador.buscaInteligente(req, res, conexao));
+
+  // --- Rotas Específicas (com o parâmetro /:id) ---
+  // O Express só chegará a estas rotas se o caminho não corresponder às de cima.
+  
   // Busca uma música específica por ID
   roteador.get('/:id', (req, res) => musicaControlador.buscarPorId(req, res, conexao));
   
