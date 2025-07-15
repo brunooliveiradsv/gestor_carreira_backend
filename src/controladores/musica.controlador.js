@@ -1,37 +1,57 @@
 // src/controladores/musica.controlador.js
-const { Op } = require('sequelize');
-const axios = require('axios');
-const cheerio = require('cheerio');
+const { Op } = require("sequelize");
+const axios = require("axios");
+const cheerio = require("cheerio");
 
 // ... (as outras funções como criar, listar, etc., permanecem exatamente iguais)
 
 exports.criar = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
-  let { nome, artista, tom, duracao_segundos, link_cifra, notas_adicionais, tags } = req.body;
+  let {
+    nome,
+    artista,
+    tom,
+    duracao_segundos,
+    link_cifra,
+    notas_adicionais,
+    tags,
+  } = req.body;
   const usuarioId = req.usuario.id;
 
   if (!nome || !artista) {
-    return res.status(400).json({ mensagem: "Nome da música e artista são obrigatórios." });
+    return res
+      .status(400)
+      .json({ mensagem: "Nome da música e artista são obrigatórios." });
   }
 
-  const duracaoParaSalvar = duracao_segundos ? parseInt(duracao_segundos, 10) : null;
+  const duracaoParaSalvar = duracao_segundos
+    ? parseInt(duracao_segundos, 10)
+    : null;
   if (isNaN(duracaoParaSalvar)) {
     duracao_segundos = null;
   }
 
   const t = await conexao.transaction();
   try {
-    const novaMusica = await Musica.create({
-      nome, artista, tom, duracao_segundos: duracaoParaSalvar, link_cifra, notas_adicionais,
-      usuario_id: usuarioId
-    }, { transaction: t });
+    const novaMusica = await Musica.create(
+      {
+        nome,
+        artista,
+        tom,
+        duracao_segundos: duracaoParaSalvar,
+        link_cifra,
+        notas_adicionais,
+        usuario_id: usuarioId,
+      },
+      { transaction: t }
+    );
 
     if (tags && tags.length > 0) {
       const tagsParaAssociar = [];
       for (const nomeTag of tags) {
         const [tag] = await Tag.findOrCreate({
           where: { nome: nomeTag.trim(), usuario_id: usuarioId },
-          transaction: t
+          transaction: t,
         });
         tagsParaAssociar.push(tag);
       }
@@ -39,9 +59,10 @@ exports.criar = async (req, res, conexao) => {
     }
 
     await t.commit();
-    const musicaCompleta = await Musica.findByPk(novaMusica.id, { include: 'tags' });
+    const musicaCompleta = await Musica.findByPk(novaMusica.id, {
+      include: "tags",
+    });
     return res.status(201).json(musicaCompleta);
-
   } catch (erro) {
     await t.rollback();
     console.error("Erro ao criar música:", erro);
@@ -58,7 +79,7 @@ exports.listar = async (req, res, conexao) => {
   if (termoBusca) {
     whereClause[Op.or] = [
       { nome: { [Op.iLike]: `%${termoBusca}%` } },
-      { artista: { [Op.iLike]: `%${termoBusca}%` } }
+      { artista: { [Op.iLike]: `%${termoBusca}%` } },
     ];
   }
   if (tom) {
@@ -66,28 +87,30 @@ exports.listar = async (req, res, conexao) => {
   }
   if (semTocarDesde) {
     whereClause[Op.or] = [
-        { ultima_vez_tocada: { [Op.is]: null } },
-        { ultima_vez_tocada: { [Op.lt]: new Date(semTocarDesde) } }
+      { ultima_vez_tocada: { [Op.is]: null } },
+      { ultima_vez_tocada: { [Op.lt]: new Date(semTocarDesde) } },
     ];
   }
 
   const orderClause = [];
-  if (popularidade === 'desc') {
-    orderClause.push(['popularidade', 'DESC']);
+  if (popularidade === "desc") {
+    orderClause.push(["popularidade", "DESC"]);
   }
-  orderClause.push(['nome', 'ASC']);
+  orderClause.push(["nome", "ASC"]);
 
   try {
     const musicas = await Musica.findAll({
       where: whereClause,
-      include: [{
-        model: Tag,
-        as: 'tags',
-        attributes: ['id', 'nome'],
-        ...(tags && { where: { id: { [Op.in]: tags.split(',') } } }),
-        through: { attributes: [] }
-      }],
-      order: orderClause
+      include: [
+        {
+          model: Tag,
+          as: "tags",
+          attributes: ["id", "nome"],
+          ...(tags && { where: { id: { [Op.in]: tags.split(",") } } }),
+          through: { attributes: [] },
+        },
+      ],
+      order: orderClause,
     });
 
     return res.status(200).json(musicas);
@@ -105,7 +128,7 @@ exports.buscarPorId = async (req, res, conexao) => {
   try {
     const musica = await Musica.findOne({
       where: { id, usuario_id: usuarioId },
-      include: [{ model: Tag, as: 'tags' }]
+      include: [{ model: Tag, as: "tags" }],
     });
 
     if (!musica) {
@@ -125,7 +148,10 @@ exports.atualizar = async (req, res, conexao) => {
   const t = await conexao.transaction();
 
   try {
-    const musica = await Musica.findOne({ where: { id, usuario_id: usuarioId }, transaction: t });
+    const musica = await Musica.findOne({
+      where: { id, usuario_id: usuarioId },
+      transaction: t,
+    });
     if (!musica) {
       await t.rollback();
       return res.status(404).json({ mensagem: "Música não encontrada." });
@@ -138,7 +164,7 @@ exports.atualizar = async (req, res, conexao) => {
       for (const nomeTag of tags) {
         const [tag] = await Tag.findOrCreate({
           where: { nome: nomeTag.trim(), usuario_id: usuarioId },
-          transaction: t
+          transaction: t,
         });
         tagsParaAssociar.push(tag);
       }
@@ -146,9 +172,8 @@ exports.atualizar = async (req, res, conexao) => {
     }
 
     await t.commit();
-    const musicaAtualizada = await Musica.findByPk(id, { include: 'tags' });
+    const musicaAtualizada = await Musica.findByPk(id, { include: "tags" });
     return res.status(200).json(musicaAtualizada);
-
   } catch (erro) {
     await t.rollback();
     console.error("Erro ao atualizar música:", erro);
@@ -162,7 +187,9 @@ exports.apagar = async (req, res, conexao) => {
   const usuarioId = req.usuario.id;
 
   try {
-    const deletado = await Musica.destroy({ where: { id, usuario_id: usuarioId } });
+    const deletado = await Musica.destroy({
+      where: { id, usuario_id: usuarioId },
+    });
     if (deletado) {
       return res.status(204).send();
     }
@@ -178,92 +205,115 @@ exports.tocarMusica = async (req, res, conexao) => {
   const usuarioId = req.usuario.id;
 
   try {
-    const musica = await Musica.findOne({ where: { id, usuario_id: usuarioId } });
+    const musica = await Musica.findOne({
+      where: { id, usuario_id: usuarioId },
+    });
     if (!musica) {
       return res.status(404).json({ mensagem: "Música não encontrada." });
     }
 
     await musica.update({
       ultima_vez_tocada: new Date(),
-      popularidade: musica.popularidade + 1
+      popularidade: musica.popularidade + 1,
     });
 
     return res.status(200).json(musica);
-
   } catch (erro) {
     console.error("Erro ao registrar 'tocar música':", erro);
     return res.status(500).json({ mensagem: "Erro ao registrar a ação." });
   }
-}
+};
 
 exports.rasparCifra = async (req, res) => {
   let { url } = req.body;
 
-  if (!url || !url.includes('cifraclub.com.br')) {
-    return res.status(400).json({ mensagem: "URL do Cifra Club inválida ou não fornecida." });
+  if (!url || !url.includes("cifraclub.com.br")) {
+    return res
+      .status(400)
+      .json({ mensagem: "URL do Cifra Club inválida ou não fornecida." });
   }
 
   if (!/^https?:\/\//i.test(url)) {
-    url = 'https://' + url;
+    url = "https://" + url;
   }
 
   try {
     const { data } = await axios.get(url);
     const $ = cheerio.load(data);
 
-    let nome = $('.g-1 > h1.g-4').text().trim();
-    let artista = $('.g-1 > h2.g-4 > a').text().trim();
-    
-    if (!nome) { nome = $('h1.t1').text().trim(); }
-    if (!artista) { artista = $('h2.t3').text().trim(); }
+    let nome = $(".g-1 > h1.g-4").text().trim();
+    let artista = $(".g-1 > h2.g-4 > a").text().trim();
 
-    const tom = $('#cifra_tom').text().trim();
-    const cifraHtml = $('pre').html();
-
-    if (!nome || !artista || !cifraHtml) {
-      return res.status(404).json({ mensagem: "Não foi possível encontrar os dados da cifra na página. O layout do site pode ter mudado." });
+    if (!nome) {
+      nome = $("h1.t1").text().trim();
+    }
+    if (!artista) {
+      artista = $("h2.t3").text().trim();
     }
 
-    const cifraComQuebrasDeLinha = cifraHtml.replace(/<br\s*\/?>/gi, '\n');
+    const tom = $("#cifra_tom").text().trim();
+    const cifraHtml = $("pre").html();
+
+    if (!nome || !artista || !cifraHtml) {
+      return res
+        .status(404)
+        .json({
+          mensagem:
+            "Não foi possível encontrar os dados da cifra na página. O layout do site pode ter mudado.",
+        });
+    }
+
+    const cifraComQuebrasDeLinha = cifraHtml.replace(/<br\s*\/?>/gi, "\n");
     const $temp = cheerio.load(cifraComQuebrasDeLinha);
     const cifraLimpa = $temp.text();
 
-    return res.status(200).json({ nome, artista, tom, notas_adicionais: cifraLimpa });
-
+    return res
+      .status(200)
+      .json({ nome, artista, tom, notas_adicionais: cifraLimpa });
   } catch (erro) {
     console.error("Erro ao fazer scraping do Cifra Club:", erro);
-    return res.status(500).json({ mensagem: "Ocorreu um erro ao tentar obter os dados do Cifra Club." });
+    return res
+      .status(500)
+      .json({
+        mensagem: "Ocorreu um erro ao tentar obter os dados do Cifra Club.",
+      });
   }
 };
 
-// --- FUNÇÃO BUSCAINTELIGENTE ATUALIZADA ---
+// --- FUNÇÃO BUSCAINTELIGENTE COM O URL CORRIGIDO ---
 exports.buscaInteligente = async (req, res) => {
-    const { nomeMusica, nomeArtista } = req.body;
-    if (!nomeMusica || !nomeArtista) {
-        return res.status(400).json({ mensagem: "Nome da música e do artista são necessários." });
+  const { nomeMusica, nomeArtista } = req.body;
+  if (!nomeMusica || !nomeArtista) {
+    return res
+      .status(400)
+      .json({ mensagem: "Nome da música e do artista são necessários." });
+  }
+
+  const termoBusca = encodeURIComponent(`${nomeMusica} ${nomeArtista}`);
+  // **URL CORRIGIDO**
+  const urlBusca = `https://www.cifraclub.com.br/search/?q=${termoBusca}`;
+
+  try {
+    const { data } = await axios.get(urlBusca);
+    const $ = cheerio.load(data);
+
+    const primeiroResultado = $(".gsc-thumbnail-inside a.gs-title")
+      .first()
+      .attr("href");
+
+    if (primeiroResultado) {
+      return res.status(200).json({ url: primeiroResultado });
+    } else {
+      return res
+        .status(404)
+        .json({
+          mensagem: "Nenhuma cifra encontrada para esta música no Cifra Club.",
+        });
     }
-
-    const termoBusca = encodeURIComponent(`${nomeMusica} ${nomeArtista}`);
-    const urlBusca = `https://www.cifraclub.com.br/busca.php?q=${termoBusca}`;
-
-    try {
-        const { data } = await axios.get(urlBusca);
-        const $ = cheerio.load(data);
-
-        // --- SELETOR CORRIGIDO ---
-        // O seletor agora procura por um link dentro de um elemento com a classe 'gs-title'
-        // que está dentro de um 'div' com a classe 'gsc-thumbnail-inside'.
-        const primeiroResultado = $('.gsc-thumbnail-inside a.gs-title').first().attr('href');
-        
-        if (primeiroResultado) {
-            // O link retornado pela busca já é o URL completo.
-            return res.status(200).json({ url: primeiroResultado });
-        } else {
-            return res.status(404).json({ mensagem: "Nenhuma cifra encontrada para esta música." });
-        }
-
-    } catch (erro) {
-        console.error("Erro na busca inteligente:", erro);
-        return res.status(500).json({ mensagem: "Erro ao realizar a busca." });
-    }
+  } catch (erro) {
+    console.error("Erro na busca inteligente:", erro);
+    return res
+      .status(500)
+      .json({ mensagem: "Erro ao realizar a busca no Cifra Club." });
+  }
 };
