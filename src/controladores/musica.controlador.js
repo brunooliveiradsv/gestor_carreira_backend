@@ -223,62 +223,6 @@ exports.tocarMusica = async (req, res, conexao) => {
   }
 };
 
-exports.rasparCifra = async (req, res) => {
-  let { url } = req.body;
-
-  if (!url || !url.includes("cifraclub.com.br")) {
-    return res
-      .status(400)
-      .json({ mensagem: "URL do Cifra Club inválida ou não fornecida." });
-  }
-
-  if (!/^https?:\/\//i.test(url)) {
-    url = "https://" + url;
-  }
-
-  try {
-    const { data } = await axios.get(url);
-    const $ = cheerio.load(data);
-
-    let nome = $(".g-1 > h1.g-4").text().trim();
-    let artista = $(".g-1 > h2.g-4 > a").text().trim();
-
-    if (!nome) {
-      nome = $("h1.t1").text().trim();
-    }
-    if (!artista) {
-      artista = $("h2.t3").text().trim();
-    }
-
-    const tom = $("#cifra_tom").text().trim();
-    const cifraHtml = $("pre").html();
-
-    if (!nome || !artista || !cifraHtml) {
-      return res
-        .status(404)
-        .json({
-          mensagem:
-            "Não foi possível encontrar os dados da cifra na página. O layout do site pode ter mudado.",
-        });
-    }
-
-    const cifraComQuebrasDeLinha = cifraHtml.replace(/<br\s*\/?>/gi, "\n");
-    const $temp = cheerio.load(cifraComQuebrasDeLinha);
-    const cifraLimpa = $temp.text();
-
-    return res
-      .status(200)
-      .json({ nome, artista, tom, notas_adicionais: cifraLimpa });
-  } catch (erro) {
-    console.error("Erro ao fazer scraping do Cifra Club:", erro);
-    return res
-      .status(500)
-      .json({
-        mensagem: "Ocorreu um erro ao tentar obter os dados do Cifra Club.",
-      });
-  }
-};
-
 // --- FUNÇÃO BUSCAINTELIGENTE ATUALIZADA ---
 exports.buscaInteligente = async (req, res) => {
   const { nomeMusica, nomeArtista } = req.body;
