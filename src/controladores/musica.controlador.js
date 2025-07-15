@@ -190,10 +190,18 @@ exports.tocarMusica = async (req, res, conexao) => {
 }
 
 exports.rasparCifra = async (req, res) => {
-  const { url } = req.body;
+  let { url } = req.body; // Usa 'let' para poder modificar a variável
+
   if (!url || !url.includes('cifraclub.com.br')) {
     return res.status(400).json({ mensagem: "URL do Cifra Club inválida ou não fornecida." });
   }
+
+  // **INÍCIO DA CORREÇÃO**
+  // Verifica se o URL começa com http:// ou https://. Se não, adiciona https://
+  if (!/^https?:\/\//i.test(url)) {
+    url = 'https://' + url;
+  }
+  // **FIM DA CORREÇÃO**
 
   try {
     const { data } = await axios.get(url);
@@ -208,7 +216,6 @@ exports.rasparCifra = async (req, res) => {
       return res.status(404).json({ mensagem: "Não foi possível encontrar os dados da cifra na página. O layout do site pode ter mudado." });
     }
     
-    // Limpa o HTML da cifra, removendo as tags <b> e <a>
     const cifraLimpa = cifra.replace(/<\/?b>/g, '').replace(/<a[^>]*>|<\/a>/g, '');
 
     return res.status(200).json({
