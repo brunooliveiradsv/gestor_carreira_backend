@@ -3,7 +3,7 @@ const { Op } = require('sequelize');
 const axios = require('axios');
 const cheerio = require('cheerio');
 
-// ... (todas as outras funções como criar, listar, etc., permanecem exatamente iguais)
+// ... (as outras funções como criar, listar, etc., permanecem exatamente iguais)
 
 exports.criar = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
@@ -66,8 +66,8 @@ exports.listar = async (req, res, conexao) => {
   }
   if (semTocarDesde) {
     whereClause[Op.or] = [
-      { ultima_vez_tocada: { [Op.is]: null } },
-      { ultima_vez_tocada: { [Op.lt]: new Date(semTocarDesde) } }
+        { ultima_vez_tocada: { [Op.is]: null } },
+        { ultima_vez_tocada: { [Op.lt]: new Date(semTocarDesde) } }
     ];
   }
 
@@ -236,14 +236,13 @@ exports.rasparCifra = async (req, res) => {
   }
 };
 
-// --- NOVA FUNÇÃO DE BUSCA INTELIGENTE ---
+// --- FUNÇÃO BUSCAINTELIGENTE ATUALIZADA ---
 exports.buscaInteligente = async (req, res) => {
     const { nomeMusica, nomeArtista } = req.body;
     if (!nomeMusica || !nomeArtista) {
         return res.status(400).json({ mensagem: "Nome da música e do artista são necessários." });
     }
 
-    // Formata a string de busca para a URL
     const termoBusca = encodeURIComponent(`${nomeMusica} ${nomeArtista}`);
     const urlBusca = `https://www.cifraclub.com.br/busca.php?q=${termoBusca}`;
 
@@ -251,13 +250,14 @@ exports.buscaInteligente = async (req, res) => {
         const { data } = await axios.get(urlBusca);
         const $ = cheerio.load(data);
 
-        // Encontra o primeiro link de resultado na lista principal
-        const primeiroResultado = $('ul.g-1.g-fix a.gs-title').first().attr('href');
+        // --- SELETOR CORRIGIDO ---
+        // O seletor agora procura por um link dentro de um elemento com a classe 'gs-title'
+        // que está dentro de um 'div' com a classe 'gsc-thumbnail-inside'.
+        const primeiroResultado = $('.gsc-thumbnail-inside a.gs-title').first().attr('href');
         
         if (primeiroResultado) {
-            // Garante que o URL seja completo
-            const urlCompleto = primeiroResultado.startsWith('http') ? primeiroResultado : `https://www.cifraclub.com.br${primeiroResultado}`;
-            return res.status(200).json({ url: urlCompleto });
+            // O link retornado pela busca já é o URL completo.
+            return res.status(200).json({ url: primeiroResultado });
         } else {
             return res.status(404).json({ mensagem: "Nenhuma cifra encontrada para esta música no Cifra Club." });
         }
