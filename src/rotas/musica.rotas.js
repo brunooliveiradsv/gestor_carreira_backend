@@ -7,26 +7,29 @@ module.exports = (conexao) => {
   const roteador = express.Router();
   roteador.use(authMiddleware(conexao));
 
-  // Rota para listar músicas com filtros avançados via query string
-  // Ex: /api/musicas?tom=G&tags=1,5&termoBusca=amor
+  // --- Rotas Gerais (sem ID) ---
+  // Lista todas as músicas com filtros
   roteador.get('/', (req, res) => musicaControlador.listar(req, res, conexao));
   
-  // Rota para criar uma nova música
+  // Cria uma nova música
   roteador.post('/', (req, res) => musicaControlador.criar(req, res, conexao));
-
-  roteador.post('/raspar-cifra', (req, res) => musicaControlador.rasparCifra(req, res, conexao));
-  // Rota para buscar uma música específica por ID
   
-  // Rota para atualizar uma música específica
+  // Rota específica para raspagem (scraping)
+  roteador.post('/raspar-cifra', (req, res) => musicaControlador.rasparCifra(req, res, conexao));
+
+  // --- Rotas Específicas (com /:id) ---
+  // O Express irá ler estas rotas apenas se o caminho não corresponder às anteriores
+  
+  // Busca uma música específica por ID
+  roteador.get('/:id', (req, res) => musicaControlador.buscarPorId(req, res, conexao));
+  
+  // Atualiza uma música específica
   roteador.put('/:id', (req, res) => musicaControlador.atualizar(req, res, conexao));
   
-  // Rota para apagar uma música
+  // Apaga uma música específica
   roteador.delete('/:id', (req, res) => musicaControlador.apagar(req, res, conexao));
 
-  roteador.get('/:id', (req, res) => musicaControlador.buscarPorId(req, res, conexao));
-    // Rota para listar músicas de um artista específico
-
-  // Rota especial para registrar que uma música foi tocada
+  // Registra que uma música foi tocada
   roteador.post('/:id/tocar', (req, res) => musicaControlador.tocarMusica(req, res, conexao));
 
   return roteador;
