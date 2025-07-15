@@ -21,23 +21,27 @@ const usuarioRotas = require("./src/rotas/usuario.rotas.js");
 const compromissoRotas = require("./src/rotas/compromisso.rotas.js");
 const financeiroRotas = require("./src/rotas/financeiro.rotas.js");
 const contatoRotas = require("./src/rotas/contato.rotas.js");
-const repertorioRotas = require("./src/rotas/repertorio.rotas.js");
+const setlistRotas = require("./src/rotas/setlist.rotas.js"); // Nova linha
 const conquistaRotas = require('./src/rotas/conquista.rotas.js');
 const adminRotas = require("./src/rotas/admin.rotas.js");
 const notificacaoRotas = require('./src/rotas/notificacao.rotas.js');
 const equipamentoRotas = require('./src/rotas/equipamento.rotas.js');
 const tarefasAgendadas = require('./src/tarefas-agendadas');
+const musicaRotas = require("./src/rotas/musica.rotas.js");
+const tagRotas = require("./src/rotas/tag.rotas.js");
 
 // Registro de todas as rotas da API
 app.use("/api/usuarios", usuarioRotas(conexao));
 app.use("/api/compromissos", compromissoRotas(conexao));
 app.use("/api/financeiro", financeiroRotas(conexao));
 app.use("/api/contatos", contatoRotas(conexao));
-app.use("/api/repertorios", repertorioRotas(conexao));
+app.use("/api/setlists", setlistRotas(conexao));
 app.use('/api/conquistas', conquistaRotas(conexao));
 app.use("/api/admin", adminRotas(conexao));
 app.use('/api/notificacoes', notificacaoRotas(conexao));
 app.use('/api/equipamentos', equipamentoRotas(conexao));
+app.use("/api/musicas", musicaRotas(conexao));
+app.use("/api/tags", tagRotas(conexao));
 
 const PORTA = process.env.PORT || 3000;
 
