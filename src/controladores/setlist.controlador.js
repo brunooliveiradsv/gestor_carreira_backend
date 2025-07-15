@@ -136,9 +136,10 @@ exports.apagar = async (req, res, conexao) => {
 // --- LÓGICA INTELIGENTE ---
 
 exports.atualizarMusicas = async (req, res, conexao) => {
-  const { Setlist, Musica } = conexao.models;
+  // A linha abaixo não muda, mas serve de referência
+  const { Setlist } = conexao.models;
   const { id } = req.params;
-  const { musicasIds } = req.body; // Espera um array de IDs de músicas na ordem correta
+  const { musicasIds } = req.body;
   const usuarioId = req.usuario.id;
   const t = await conexao.transaction();
 
@@ -149,17 +150,17 @@ exports.atualizarMusicas = async (req, res, conexao) => {
       return res.status(404).json({ mensagem: "Setlist não encontrado." });
     }
 
-    // Cria os objetos para a tabela de ligação, incluindo a ordem
     const musicasParaAssociar = musicasIds.map((musicaId, index) => ({
       setlist_id: setlist.id,
       musica_id: musicaId,
       ordem: index
     }));
 
-    // Remove todas as músicas antigas e insere as novas em uma única transação
-    await conexao.models.setlist_musicas.destroy({ where: { setlist_id: setlist.id }, transaction: t });
+    // --- LINHAS CORRIGIDAS ---
+    // Corrigimos de 'setlist_musicas' para 'SetlistMusica' (o nome da classe do modelo)
+    await conexao.models.SetlistMusica.destroy({ where: { setlist_id: setlist.id }, transaction: t });
     if (musicasParaAssociar.length > 0) {
-      await conexao.models.setlist_musicas.bulkCreate(musicasParaAssociar, { transaction: t });
+      await conexao.models.SetlistMusica.bulkCreate(musicasParaAssociar, { transaction: t });
     }
     
     await t.commit();
