@@ -259,11 +259,11 @@ exports.buscaInteligente = async (req, res) => {
             // O link retornado pela busca já é o URL completo.
             return res.status(200).json({ url: primeiroResultado });
         } else {
-            return res.status(404).json({ mensagem: "Nenhuma cifra encontrada para esta música no Cifra Club." });
+            return res.status(404).json({ mensagem: "Nenhuma cifra encontrada para esta música." });
         }
 
     } catch (erro) {
         console.error("Erro na busca inteligente:", erro);
-        return res.status(500).json({ mensagem: "Erro ao realizar a busca no Cifra Club." });
+        return res.status(500).json({ mensagem: "Erro ao realizar a busca." });
     }
 };
