@@ -3,21 +3,26 @@ const { Op } = require('sequelize');
 const axios = require('axios');
 const cheerio = require('cheerio');
 
-// ... (as outras funções como criar, listar, etc., permanecem exatamente iguais)
+// ... (todas as outras funções como criar, listar, etc., permanecem exatamente iguais)
 
 exports.criar = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
-  const { nome, artista, tom, duracao_segundos, link_cifra, notas_adicionais, tags } = req.body;
+  let { nome, artista, tom, duracao_segundos, link_cifra, notas_adicionais, tags } = req.body;
   const usuarioId = req.usuario.id;
 
   if (!nome || !artista) {
     return res.status(400).json({ mensagem: "Nome da música e artista são obrigatórios." });
   }
 
+  const duracaoParaSalvar = duracao_segundos ? parseInt(duracao_segundos, 10) : null;
+  if (isNaN(duracaoParaSalvar)) {
+    duracao_segundos = null;
+  }
+
   const t = await conexao.transaction();
   try {
     const novaMusica = await Musica.create({
-      nome, artista, tom, duracao_segundos, link_cifra, notas_adicionais,
+      nome, artista, tom, duracao_segundos: duracaoParaSalvar, link_cifra, notas_adicionais,
       usuario_id: usuarioId
     }, { transaction: t });
 
@@ -61,8 +66,8 @@ exports.listar = async (req, res, conexao) => {
   }
   if (semTocarDesde) {
     whereClause[Op.or] = [
-        { ultima_vez_tocada: { [Op.is]: null } },
-        { ultima_vez_tocada: { [Op.lt]: new Date(semTocarDesde) } }
+      { ultima_vez_tocada: { [Op.is]: null } },
+      { ultima_vez_tocada: { [Op.lt]: new Date(semTocarDesde) } }
     ];
   }
 
@@ -191,7 +196,6 @@ exports.tocarMusica = async (req, res, conexao) => {
   }
 }
 
-// --- FUNÇÃO RASPARCIFRA ATUALIZADA E MAIS ROBUSTA ---
 exports.rasparCifra = async (req, res) => {
   let { url } = req.body;
 
@@ -207,17 +211,11 @@ exports.rasparCifra = async (req, res) => {
     const { data } = await axios.get(url);
     const $ = cheerio.load(data);
 
-    // Tentativa 1: Seletores mais modernos
     let nome = $('.g-1 > h1.g-4').text().trim();
     let artista = $('.g-1 > h2.g-4 > a').text().trim();
     
-    // Tentativa 2: Seletores de reserva (fallback) caso os primeiros falhem
-    if (!nome) {
-        nome = $('h1.t1').text().trim();
-    }
-    if (!artista) {
-        artista = $('h2.t3').text().trim();
-    }
+    if (!nome) { nome = $('h1.t1').text().trim(); }
+    if (!artista) { artista = $('h2.t3').text().trim(); }
 
     const tom = $('#cifra_tom').text().trim();
     const cifraHtml = $('pre').html();
@@ -230,15 +228,42 @@ exports.rasparCifra = async (req, res) => {
     const $temp = cheerio.load(cifraComQuebrasDeLinha);
     const cifraLimpa = $temp.text();
 
-    return res.status(200).json({
-      nome,
-      artista,
-      tom,
-      notas_adicionais: cifraLimpa
-    });
+    return res.status(200).json({ nome, artista, tom, notas_adicionais: cifraLimpa });
 
   } catch (erro) {
     console.error("Erro ao fazer scraping do Cifra Club:", erro);
     return res.status(500).json({ mensagem: "Ocorreu um erro ao tentar obter os dados do Cifra Club." });
   }
+};
+
+// --- NOVA FUNÇÃO DE BUSCA INTELIGENTE ---
+exports.buscaInteligente = async (req, res) => {
+    const { nomeMusica, nomeArtista } = req.body;
+    if (!nomeMusica || !nomeArtista) {
+        return res.status(400).json({ mensagem: "Nome da música e do artista são necessários." });
+    }
+
+    // Formata a string de busca para a URL
+    const termoBusca = encodeURIComponent(`${nomeMusica} ${nomeArtista}`);
+    const urlBusca = `https://www.cifraclub.com.br/busca.php?q=${termoBusca}`;
+
+    try {
+        const { data } = await axios.get(urlBusca);
+        const $ = cheerio.load(data);
+
+        // Encontra o primeiro link de resultado na lista principal
+        const primeiroResultado = $('ul.g-1.g-fix a.gs-title').first().attr('href');
+        
+        if (primeiroResultado) {
+            // Garante que o URL seja completo
+            const urlCompleto = primeiroResultado.startsWith('http') ? primeiroResultado : `https://www.cifraclub.com.br${primeiroResultado}`;
+            return res.status(200).json({ url: urlCompleto });
+        } else {
+            return res.status(404).json({ mensagem: "Nenhuma cifra encontrada para esta música no Cifra Club." });
+        }
+
+    } catch (erro) {
+        console.error("Erro na busca inteligente:", erro);
+        return res.status(500).json({ mensagem: "Erro ao realizar a busca no Cifra Club." });
+    }
 };
