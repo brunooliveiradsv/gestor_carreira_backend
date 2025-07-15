@@ -223,7 +223,7 @@ exports.tocarMusica = async (req, res, conexao) => {
   }
 };
 
-// --- FUNÇÃO BUSCAINTELIGENTE ATUALIZADA ---
+// --- FUNÇÃO BUSCAINTELIGENTE COM O SELETOR CORRIGIDO ---
 exports.buscaInteligente = async (req, res) => {
   const { nomeMusica, nomeArtista } = req.body;
   if (!nomeMusica || !nomeArtista) {
@@ -236,20 +236,52 @@ exports.buscaInteligente = async (req, res) => {
   const urlBusca = `https://www.cifraclub.com.br/search/?q=${termoBusca}`;
 
   try {
+    console.log(`[Busca Inteligente] Buscando URL: ${urlBusca}`);
     const { data } = await axios.get(urlBusca);
     const $ = cheerio.load(data);
 
-    // --- SELETOR CORRIGIDO E MAIS ESPECÍFICO ---
-    // Agora ele procura pelo primeiro link dentro da lista de resultados de músicas
-    const primeiroResultado = $(
-      "#___gcse_0 .gsc-results-wrapper-visible .gsc-webResult .gsc-result a.gs-title"
-    )
+    // **SELETOR ATUALIZADO**
+    const primeiroResultado = $(".gsc-results .gsc-webResult .gs-title a")
       .first()
       .attr("href");
 
     if (primeiroResultado) {
-      return res.status(200).json({ url: primeiroResultado });
+      console.log(`[Busca Inteligente] Link encontrado: ${primeiroResultado}`);
+
+      // O resto da lógica para raspar a página da cifra permanece o mesmo
+      const { data: dataCifra } = await axios.get(primeiroResultado);
+      const $cifra = cheerio.load(dataCifra);
+
+      let nome =
+        $cifra(".g-1 > h1.g-4").text().trim() || $cifra("h1.t1").text().trim();
+      let artista =
+        $cifra(".g-1 > h2.g-4 > a").text().trim() ||
+        $cifra("h2.t3").text().trim();
+      const tom = $cifra("#cifra_tom").text().trim();
+      const cifraHtml = $cifra("pre").html();
+
+      if (!cifraHtml) {
+        return res
+          .status(404)
+          .json({
+            mensagem: "Não foi possível extrair a cifra da página encontrada.",
+          });
+      }
+
+      const cifraComQuebrasDeLinha = cifraHtml.replace(/<br\s*\/?>/gi, "\n");
+      const $temp = cheerio.load(cifraComQuebrasDeLinha);
+      const cifraLimpa = $temp.text();
+
+      return res.status(200).json({
+        nome: nome,
+        artista: artista,
+        tom: tom,
+        notas_adicionais: cifraLimpa,
+      });
     } else {
+      console.log(
+        "[Busca Inteligente] Nenhum resultado encontrado com o seletor atual."
+      );
       return res
         .status(404)
         .json({
