@@ -1,62 +1,46 @@
 // src/controladores/musica.controlador.js
 const { Op } = require("sequelize");
 
+// A função 'criar' não precisa de alterações, mas é incluída para manter o ficheiro completo
 exports.criar = async (req, res, conexao) => {
-  console.log("CORPO DO PEDIDO (CRIAR):", req.body); // <-- DEBUG
+  console.log("[DEBUG] Início de 'criar' com o corpo:", req.body);
   const { Musica, Tag } = conexao.models;
   const {
-    nome,
-    artista,
-    tom,
-    duracao_segundos,
-    bpm,
-    link_cifra,
-    notas_adicionais,
-    tags,
+    nome, artista, tom, duracao_segundos, bpm, link_cifra, notas_adicionais, tags,
   } = req.body;
   const usuarioId = req.usuario.id;
 
   if (!nome || !artista) {
-    return res
-      .status(400)
-      .json({ mensagem: "Nome da música e artista são obrigatórios." });
+    return res.status(400).json({ mensagem: "Nome da música e artista são obrigatórios." });
   }
 
   const t = await conexao.transaction();
   try {
     const novaMusica = await Musica.create(
       {
-        nome: nome.trim(),
-        artista: artista.trim(),
-        tom,
-        duracao_segundos,
-        bpm,
-        link_cifra,
-        notas_adicionais,
-        usuario_id: usuarioId,
+        nome: nome.trim(), artista: artista.trim(), tom, duracao_segundos, bpm, link_cifra, notas_adicionais, usuario_id: usuarioId,
       },
       { transaction: t }
     );
 
-    if (tags && Array.isArray(tags) && tags.length > 0) {
-      console.log("Processando tags para nova música:", tags); // <-- DEBUG
+    if (tags && Array.isArray(tags)) {
+      console.log("[DEBUG] Processando tags para nova música:", tags);
       const tagsParaAssociar = [];
-      for (const nomeTag of tags) {
-        const [tag] = await Tag.findOrCreate({
-          where: { nome: nomeTag.trim(), usuario_id: usuarioId },
-          defaults: { nome: nomeTag.trim(), usuario_id: usuarioId },
-          transaction: t,
-        });
-        tagsParaAssociar.push(tag);
+      if (tags.length > 0) {
+        for (const nomeTag of tags) {
+          const [tag] = await Tag.findOrCreate({
+            where: { nome: nomeTag.trim(), usuario_id: usuarioId },
+            transaction: t,
+          });
+          tagsParaAssociar.push(tag);
+        }
       }
       await novaMusica.setTags(tagsParaAssociar, { transaction: t });
-      console.log("Tags associadas com sucesso."); // <-- DEBUG
+      console.log("[DEBUG] Tags para nova música associadas com sucesso.");
     }
 
     await t.commit();
-    const musicaCompleta = await Musica.findByPk(novaMusica.id, {
-      include: ["tags"],
-    });
+    const musicaCompleta = await Musica.findByPk(novaMusica.id, { include: ["tags"] });
     return res.status(201).json(musicaCompleta);
   } catch (erro) {
     await t.rollback();
@@ -65,8 +49,10 @@ exports.criar = async (req, res, conexao) => {
   }
 };
 
+
+// --- FUNÇÃO ATUALIZAR (COM A CORREÇÃO) ---
 exports.atualizar = async (req, res, conexao) => {
-  console.log(`CORPO DO PEDIDO (ATUALIZAR ID: ${req.params.id}):`, req.body); // <-- DEBUG
+  console.log(`[DEBUG] Início de 'atualizar' para ID ${req.params.id} com o corpo:`, req.body);
   const { Musica, Tag } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
@@ -74,36 +60,40 @@ exports.atualizar = async (req, res, conexao) => {
   const t = await conexao.transaction();
 
   try {
-    const musica = await Musica.findOne({
-      where: { id, usuario_id: usuarioId },
-      transaction: t,
-    });
+    const musica = await Musica.findOne({ where: { id, usuario_id: usuarioId }, transaction: t });
     if (!musica) {
       await t.rollback();
       return res.status(404).json({ mensagem: "Música não encontrada." });
     }
 
+    // 1. Atualiza os dados principais da música
     await musica.update(dadosMusica, { transaction: t });
+    console.log("[DEBUG] Dados principais da música atualizados.");
 
+    // 2. Garante que o array de tags seja sempre processado.
+    // O método setTags do Sequelize é inteligente: ele remove as associações que não estão no novo array
+    // e adiciona as novas, fazendo a sincronização completa.
     if (Array.isArray(tags)) {
-      console.log("Processando tags para música existente:", tags); // <-- DEBUG
+      console.log("[DEBUG] Sincronizando tags:", tags);
       const tagsParaAssociar = [];
       if (tags.length > 0) {
         for (const nomeTag of tags) {
           const [tag] = await Tag.findOrCreate({
             where: { nome: nomeTag.trim(), usuario_id: usuarioId },
-            defaults: { nome: nomeTag.trim(), usuario_id: usuarioId },
             transaction: t,
           });
           tagsParaAssociar.push(tag);
         }
       }
-      // O setTags lida com a remoção de tags antigas e adição de novas
+      // Esta é a linha crucial. Ela vai associar o novo array de tags à música.
       await musica.setTags(tagsParaAssociar, { transaction: t });
-      console.log("Tags sincronizadas com sucesso."); // <-- DEBUG
+      console.log("[DEBUG] Sincronização de tags concluída.");
+    } else {
+        console.log("[DEBUG] Nenhum array de tags foi fornecido no pedido. As tags não serão alteradas.");
     }
 
     await t.commit();
+    console.log("[DEBUG] Transação concluída com sucesso.");
     const musicaAtualizada = await Musica.findByPk(id, { include: "tags" });
     return res.status(200).json(musicaAtualizada);
   } catch (erro) {
@@ -113,8 +103,8 @@ exports.atualizar = async (req, res, conexao) => {
   }
 };
 
-// --- Funções de listar, buscarPorId, etc. permanecem as mesmas ---
 
+// O resto das funções permanece igual...
 exports.listar = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const usuarioId = req.usuario.id;
