@@ -12,8 +12,9 @@ class Tag extends Model {
   }
 
   static associate(models) {
-    this.belongsTo(models.Usuario, { foreignKey: 'usuario_id', as: 'usuario' });
-   this.belongsToMany(models.Musica, { through: 'musica_tags', foreignKey: 'tag_id', as: 'musicas' });
+    // A associação com Usuario foi REMOVIDA
+    // A tag agora pertence a muitas músicas
+    this.belongsToMany(models.Musica, { through: 'musica_tags', foreignKey: 'tag_id', as: 'musicas' });
   }
 }
 

@@ -1,23 +1,20 @@
+// migrations/20250714211150-criar-tabela-tags.js
 'use strict';
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('musica_tags', {
-      musica_id: {
+    await queryInterface.createTable('tags', {
+      id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
+        autoIncrement: true,
         allowNull: false,
-        references: { model: 'musicas', key: 'id' },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
       },
-      tag_id: {
-        type: Sequelize.INTEGER,
-        primaryKey: true,
+      // O campo usuario_id é REMOVIDO
+      nome: {
+        type: Sequelize.STRING,
         allowNull: false,
-        references: { model: 'tags', key: 'id' },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
+        unique: true, // Garante que cada nome de tag seja único
       },
       created_at: {
         type: Sequelize.DATE,
@@ -30,6 +27,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('musica_tags');
+    await queryInterface.dropTable('tags');
   }
 };

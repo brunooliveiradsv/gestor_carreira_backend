@@ -1,11 +1,11 @@
 // src/controladores/tag.controlador.js
 exports.listar = async (req, res, conexao) => {
     const { Tag } = conexao.models;
-    const usuarioId = req.usuario.id;
+    // Não precisamos mais do usuarioId aqui
 
     try {
         const tags = await Tag.findAll({
-            where: { usuario_id: usuarioId },
+            // A cláusula 'where' foi removida para buscar todas as tags
             order: [['nome', 'ASC']]
         });
         return res.status(200).json(tags);

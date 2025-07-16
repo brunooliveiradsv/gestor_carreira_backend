@@ -1,10 +1,14 @@
 // src/controladores/musica.controlador.js
 const { Op } = require("sequelize");
 
+/**
+ * Cria uma nova música e associa as tags predefinidas através dos seus IDs.
+ */
 exports.criar = async (req, res, conexao) => {
-  const { Musica, Tag } = conexao.models;
+  const { Musica } = conexao.models;
   const {
-    nome, artista, tom, duracao_segundos, bpm, link_cifra, notas_adicionais, tags,
+    nome, artista, tom, duracao_segundos, bpm, link_cifra, notas_adicionais, 
+    tagIds, // Espera um array de IDs de tags, ex: [1, 5, 12]
   } = req.body;
   const usuarioId = req.usuario.id;
 
@@ -14,26 +18,17 @@ exports.criar = async (req, res, conexao) => {
 
   const t = await conexao.transaction();
   try {
-    const novaMusica = await Musica.create(
-      {
-        nome: nome.trim(), artista: artista.trim(), tom, duracao_segundos, bpm, link_cifra, notas_adicionais, usuario_id: usuarioId,
-      },
-      { transaction: t }
-    );
+    const novaMusica = await Musica.create({
+      nome: nome.trim(), artista: artista.trim(), tom, duracao_segundos, bpm, link_cifra, notas_adicionais, usuario_id: usuarioId,
+    }, { transaction: t });
 
-    if (tags && Array.isArray(tags) && tags.length > 0) {
-      const tagsParaAssociar = [];
-      for (const nomeTag of tags) {
-        const [tag] = await Tag.findOrCreate({
-          where: { nome: nomeTag.trim(), usuario_id: usuarioId },
-          transaction: t,
-        });
-        tagsParaAssociar.push(tag);
-      }
-      await novaMusica.setTags(tagsParaAssociar, { transaction: t });
+    // Se foram enviados IDs de tags, o Sequelize irá criar as associações na tabela 'musica_tags'
+    if (tagIds && Array.isArray(tagIds) && tagIds.length > 0) {
+      await novaMusica.setTags(tagIds, { transaction: t });
     }
 
     await t.commit();
+    // Devolve a música recém-criada, incluindo as suas tags associadas
     const musicaCompleta = await Musica.findByPk(novaMusica.id, { include: ["tags"] });
     return res.status(201).json(musicaCompleta);
   } catch (erro) {
@@ -43,11 +38,15 @@ exports.criar = async (req, res, conexao) => {
   }
 };
 
+/**
+ * Atualiza uma música existente e sincroniza as suas tags predefinidas.
+ */
 exports.atualizar = async (req, res, conexao) => {
-  const { Musica, Tag } = conexao.models;
+  const { Musica } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
-  const { tags, ...dadosMusica } = req.body;
+  // Separa o array de IDs de tags do resto dos dados da música
+  const { tagIds, ...dadosMusica } = req.body;
   const t = await conexao.transaction();
 
   try {
@@ -57,23 +56,16 @@ exports.atualizar = async (req, res, conexao) => {
       return res.status(404).json({ mensagem: "Música não encontrada." });
     }
 
+    // Atualiza os campos da música (nome, artista, tom, etc.)
     await musica.update(dadosMusica, { transaction: t });
 
-    if (Array.isArray(tags)) {
-      const tagsParaAssociar = [];
-      if (tags.length > 0) {
-        for (const nomeTag of tags) {
-          const [tag] = await Tag.findOrCreate({
-            where: { nome: nomeTag.trim(), usuario_id: usuarioId },
-            transaction: t,
-          });
-          tagsParaAssociar.push(tag);
-        }
-      }
-      await musica.setTags(tagsParaAssociar, { transaction: t });
+    // Sincroniza as associações de tags. O `setTags` remove as antigas e adiciona as novas.
+    if (Array.isArray(tagIds)) {
+      await musica.setTags(tagIds, { transaction: t });
     }
 
     await t.commit();
+    // Devolve a música atualizada com as tags incluídas para o frontend
     const musicaAtualizada = await Musica.findByPk(id, { include: "tags" });
     return res.status(200).json(musicaAtualizada);
   } catch (erro) {
@@ -83,7 +75,12 @@ exports.atualizar = async (req, res, conexao) => {
   }
 };
 
-// As outras funções (listar, buscarPorId, etc.) permanecem as mesmas
+
+// --- Funções Adicionais (sem alterações necessárias) ---
+
+/**
+ * Lista as músicas do utilizador com base nos filtros fornecidos.
+ */
 exports.listar = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const usuarioId = req.usuario.id;
@@ -129,6 +126,9 @@ exports.listar = async (req, res, conexao) => {
   }
 };
 
+/**
+ * Busca uma música específica pelo seu ID.
+ */
 exports.buscarPorId = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const { id } = req.params;
@@ -146,6 +146,9 @@ exports.buscarPorId = async (req, res, conexao) => {
   }
 };
 
+/**
+ * Apaga uma música do repertório.
+ */
 exports.apagar = async (req, res, conexao) => {
   const { Musica } = conexao.models;
   const { id } = req.params;
@@ -161,6 +164,9 @@ exports.apagar = async (req, res, conexao) => {
   }
 };
 
+/**
+ * Regista que uma música foi tocada, atualizando a data e incrementando a popularidade.
+ */
 exports.tocarMusica = async (req, res, conexao) => {
   const { Musica } = conexao.models;
   const { id } = req.params;
@@ -182,6 +188,9 @@ exports.tocarMusica = async (req, res, conexao) => {
   }
 };
 
+/**
+ * Função de busca interna, usada para verificar se uma música já existe no repertório do utilizador.
+ */
 exports.buscaInterna = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const { nome, artista } = req.query;
@@ -201,9 +210,6 @@ exports.buscaInterna = async (req, res, conexao) => {
       include: [{ model: Tag, as: "tags" }],
     });
     if (musica) {
-      console.log(
-        `[Busca Interna] Música "${nomeLimpo}" encontrada no banco de dados.`
-      );
       return res.status(200).json(musica);
     } else {
       return res
