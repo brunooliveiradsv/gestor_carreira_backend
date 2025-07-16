@@ -14,7 +14,6 @@ class Usuario extends Model {
     this.hasMany(models.Transacao, { foreignKey: 'usuario_id', as: 'transacoes' });
     this.hasMany(models.Setlist, { foreignKey: 'usuario_id', as: 'setlists' });
     this.hasMany(models.Musica, { foreignKey: 'usuario_id', as: 'musicas' });
-    this.hasMany(models.Tag, { foreignKey: 'usuario_id', as: 'tags' });
     this.hasMany(models.Notificacao, { foreignKey: 'usuario_id', as: 'notificacoes' });
     this.hasMany(models.Equipamento, { foreignKey: 'usuario_id', as: 'equipamentos' });
     this.belongsToMany(models.Conquista, { through: models.UsuarioConquista, foreignKey: 'usuario_id', as: 'conquistas' });
