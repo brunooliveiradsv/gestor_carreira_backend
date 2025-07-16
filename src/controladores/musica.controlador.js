@@ -1,8 +1,8 @@
 // src/controladores/musica.controlador.js
 const { Op } = require("sequelize");
 
-// --- FUNÇÃO DE CRIAÇÃO (REVISADA) ---
 exports.criar = async (req, res, conexao) => {
+  console.log("CORPO DO PEDIDO (CRIAR):", req.body); // <-- DEBUG
   const { Musica, Tag } = conexao.models;
   const {
     nome,
@@ -12,11 +12,9 @@ exports.criar = async (req, res, conexao) => {
     bpm,
     link_cifra,
     notas_adicionais,
-    tags, // Recebe o array de nomes de tags
+    tags,
   } = req.body;
   const usuarioId = req.usuario.id;
-
-  console.log("Recebido para criar:", req.body); // Para depuração
 
   if (!nome || !artista) {
     return res
@@ -40,23 +38,22 @@ exports.criar = async (req, res, conexao) => {
       { transaction: t }
     );
 
-    // Se foram enviadas tags, processa-as
     if (tags && Array.isArray(tags) && tags.length > 0) {
+      console.log("Processando tags para nova música:", tags); // <-- DEBUG
       const tagsParaAssociar = [];
       for (const nomeTag of tags) {
-        // Encontra ou cria a tag para o utilizador
         const [tag] = await Tag.findOrCreate({
           where: { nome: nomeTag.trim(), usuario_id: usuarioId },
+          defaults: { nome: nomeTag.trim(), usuario_id: usuarioId },
           transaction: t,
         });
         tagsParaAssociar.push(tag);
       }
-      // Associa as tags encontradas/criadas à nova música
       await novaMusica.setTags(tagsParaAssociar, { transaction: t });
+      console.log("Tags associadas com sucesso."); // <-- DEBUG
     }
 
     await t.commit();
-    // Devolve a música recém-criada, incluindo as suas tags associadas
     const musicaCompleta = await Musica.findByPk(novaMusica.id, {
       include: ["tags"],
     });
@@ -68,16 +65,12 @@ exports.criar = async (req, res, conexao) => {
   }
 };
 
-// --- FUNÇÃO DE ATUALIZAÇÃO (REVISADA) ---
 exports.atualizar = async (req, res, conexao) => {
+  console.log(`CORPO DO PEDIDO (ATUALIZAR ID: ${req.params.id}):`, req.body); // <-- DEBUG
   const { Musica, Tag } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
-  // Separa as tags do resto dos dados da música
   const { tags, ...dadosMusica } = req.body;
-  
-  console.log("Recebido para atualizar:", req.body); // Para depuração
-
   const t = await conexao.transaction();
 
   try {
@@ -90,30 +83,27 @@ exports.atualizar = async (req, res, conexao) => {
       return res.status(404).json({ mensagem: "Música não encontrada." });
     }
 
-    // 1. Atualiza os dados principais da música (nome, artista, etc.)
     await musica.update(dadosMusica, { transaction: t });
 
-    // 2. Lida com as tags de forma explícita
-    if (tags && Array.isArray(tags)) {
+    if (Array.isArray(tags)) {
+      console.log("Processando tags para música existente:", tags); // <-- DEBUG
       const tagsParaAssociar = [];
-      for (const nomeTag of tags) {
-        const [tag] = await Tag.findOrCreate({
-          where: { nome: nomeTag.trim(), usuario_id: usuarioId },
-          transaction: t,
-        });
-        tagsParaAssociar.push(tag);
+      if (tags.length > 0) {
+        for (const nomeTag of tags) {
+          const [tag] = await Tag.findOrCreate({
+            where: { nome: nomeTag.trim(), usuario_id: usuarioId },
+            defaults: { nome: nomeTag.trim(), usuario_id: usuarioId },
+            transaction: t,
+          });
+          tagsParaAssociar.push(tag);
+        }
       }
-      // O método 'setTags' remove todas as associações antigas
-      // e cria as novas. É a forma mais segura de garantir a sincronização.
+      // O setTags lida com a remoção de tags antigas e adição de novas
       await musica.setTags(tagsParaAssociar, { transaction: t });
-    } else if (tags === null || (Array.isArray(tags) && tags.length === 0)) {
-      // Se um array vazio ou nulo for enviado, remove todas as tags
-      await musica.setTags([], { transaction: t });
+      console.log("Tags sincronizadas com sucesso."); // <-- DEBUG
     }
 
     await t.commit();
-
-    // Devolve a música atualizada com as tags incluídas
     const musicaAtualizada = await Musica.findByPk(id, { include: "tags" });
     return res.status(200).json(musicaAtualizada);
   } catch (erro) {
@@ -123,7 +113,8 @@ exports.atualizar = async (req, res, conexao) => {
   }
 };
 
-// (As outras funções do controlador como 'listar', 'buscarPorId', etc. permanecem as mesmas)
+// --- Funções de listar, buscarPorId, etc. permanecem as mesmas ---
+
 exports.listar = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const usuarioId = req.usuario.id;
