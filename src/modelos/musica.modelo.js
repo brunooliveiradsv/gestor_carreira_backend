@@ -7,7 +7,8 @@ class Musica extends Model {
       nome: DataTypes.STRING,
       artista: DataTypes.STRING,
       tom: DataTypes.STRING,
-      duracao_segundos: DataTypes.STRING, // Confirmado como STRING
+      // CORREÇÃO: O nome do campo foi atualizado para corresponder à base de dados.
+      duracao_minutos: DataTypes.STRING, 
       bpm: DataTypes.INTEGER,
       link_cifra: DataTypes.STRING,
       notas_adicionais: DataTypes.TEXT,
