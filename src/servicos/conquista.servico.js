@@ -51,7 +51,7 @@ exports.verificarEConcederConquistas = async (
 };
 
 exports.calcularProgressoAtual = async (usuarioId, tipoCondicao, conexao) => {
-  const { Compromisso, Contato, Transacao, Repertorio } = conexao.models;
+  const { Compromisso, Contato, Transacao, Setlist } = conexao.models;
   let valorAtual = 0;
 
   switch (tipoCondicao) {
@@ -74,10 +74,10 @@ exports.calcularProgressoAtual = async (usuarioId, tipoCondicao, conexao) => {
       valorAtual = await Contato.count({ where: { usuario_id: usuarioId } });
       break;
     case "CONTAGEM_REPERTORIOS":
-      valorAtual = await Repertorio.count({ where: { usuario_id: usuarioId } });
+      valorAtual = await Setlist.count({ where: { usuario_id: usuarioId } });
       break;
     case "PRIMEIRO_REPERTORIO_CRIADO":
-      valorAtual = await Repertorio.count({ where: { usuario_id: usuarioId } });
+      valorAtual = await Setlist.count({ where: { usuario_id: usuarioId } });
       break;
     case "PRIMEIRO_COMPROMISSO_CRIADO":
       valorAtual = await Compromisso.count({
