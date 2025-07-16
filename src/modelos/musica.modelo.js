@@ -9,9 +9,8 @@ class Musica extends Model {
         artista: DataTypes.STRING,
         tom: DataTypes.STRING,
         duracao_segundos: DataTypes.INTEGER,
+        bpm: DataTypes.INTEGER,
         link_cifra: DataTypes.STRING,
-        link_letra: DataTypes.STRING,
-        link_video: DataTypes.STRING,
         notas_adicionais: DataTypes.TEXT,
         popularidade: DataTypes.INTEGER,
         ultima_vez_tocada: DataTypes.DATE,
@@ -30,7 +29,15 @@ class Musica extends Model {
       foreignKey: "musica_id",
       as: "tags",
     });
-    this.belongsToMany(models.Setlist, { through: 'setlist_musicas', foreignKey: 'musica_id', as: 'setlists' });
+    this.belongsToMany(models.Setlist, {
+      through: "setlist_musicas",
+      foreignKey: "musica_id",
+      as: "setlists",
+    });
+    this.hasMany(models.SugestaoMusica, {
+      foreignKey: "musica_id",
+      as: "sugestoes",
+    });
   }
 }
 

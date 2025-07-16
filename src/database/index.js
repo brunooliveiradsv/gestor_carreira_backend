@@ -17,7 +17,6 @@ const Tag = require('../modelos/tag.modelo.js');
 const SetlistMusica = require('../modelos/setlist_musica.modelo.js');
 const SugestaoMusica = require('../modelos/sugestao_musica.modelo.js');
 
-
 const conexao = new Sequelize(dbConfig);
 
 // Coloca todos os modelos num array para facilitar a gestão
@@ -40,8 +39,7 @@ const modelos = [
 // Inicializa cada modelo, passando a conexão
 modelos.forEach(modelo => modelo.init(conexao));
 
-// --- CÓDIGO CORRIGIDO ---
-// Executa as associações de cada modelo, APENAS se o método 'associate' existir
+// Executa as associações de cada modelo, se o método 'associate' existir
 modelos.forEach(modelo => {
   if (modelo.associate) {
     modelo.associate(conexao.models);
