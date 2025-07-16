@@ -51,24 +51,18 @@ exports.verificarEConcederConquistas = async (
 };
 
 exports.calcularProgressoAtual = async (usuarioId, tipoCondicao, conexao) => {
-  const { Compromisso, Contato, Transacao, Setlist } = conexao.models;
+  const { Compromisso, Contato, Transacao, Setlist, Musica } = conexao.models; // Adicionado Musica para referência
   let valorAtual = 0;
 
   switch (tipoCondicao) {
     case "CONTAGEM_SHOWS_REALIZADOS":
-      valorAtual = await Compromisso.count({
-        where: { usuario_id: usuarioId, tipo: "Show", status: "Realizado" },
-      });
+      valorAtual = await Compromisso.count({ where: { usuario_id: usuarioId, tipo: "Show", status: "Realizado" } });
       break;
     case "CONTAGEM_ENSAIOS_REALIZADOS":
-      valorAtual = await Compromisso.count({
-        where: { usuario_id: usuarioId, tipo: "Ensaio", status: "Realizado" },
-      });
+      valorAtual = await Compromisso.count({ where: { usuario_id: usuarioId, tipo: "Ensaio", status: "Realizado" } });
       break;
     case "CONTAGEM_GRAVACOES_REALIZADAS":
-      valorAtual = await Compromisso.count({
-        where: { usuario_id: usuarioId, tipo: "Gravação", status: "Realizado" },
-      });
+      valorAtual = await Compromisso.count({ where: { usuario_id: usuarioId, tipo: "Gravação", status: "Realizado" } });
       break;
     case "CONTAGEM_CONTATOS":
       valorAtual = await Contato.count({ where: { usuario_id: usuarioId } });
@@ -80,34 +74,17 @@ exports.calcularProgressoAtual = async (usuarioId, tipoCondicao, conexao) => {
       valorAtual = await Setlist.count({ where: { usuario_id: usuarioId } });
       break;
     case "PRIMEIRO_COMPROMISSO_CRIADO":
-      valorAtual = await Compromisso.count({
-        where: { usuario_id: usuarioId },
-      });
+      valorAtual = await Compromisso.count({ where: { usuario_id: usuarioId } });
       break;
     case "PRIMEIRA_RECEITA_SHOW":
-      valorAtual = await Transacao.count({
-        where: {
-          usuario_id: usuarioId,
-          tipo: "receita",
-          compromisso_id: { [Op.ne]: null },
-        },
-      });
+      valorAtual = await Transacao.count({ where: { usuario_id: usuarioId, tipo: "receita", compromisso_id: { [Op.ne]: null } } });
       break;
     case "TOTAL_RECEITAS":
-      const total = await Transacao.sum("valor", {
-        where: { usuario_id: usuarioId, tipo: "receita" },
-      });
+      const total = await Transacao.sum("valor", { where: { usuario_id: usuarioId, tipo: "receita" } });
       valorAtual = total || 0;
       break;
-    // --- CASE CORRIGIDO E FINAL ---
     case "PRIMEIRA_DESPESA_EQUIPAMENTO":
-      valorAtual = await Transacao.count({
-        where: {
-          usuario_id: usuarioId,
-          tipo: "despesa",
-          categoria: "Equipamento",
-        },
-      });
+      valorAtual = await Transacao.count({ where: { usuario_id: usuarioId, tipo: "despesa", categoria: "Equipamento" } });
       break;
     default:
       console.warn(
