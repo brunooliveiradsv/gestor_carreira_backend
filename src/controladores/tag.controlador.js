@@ -9,7 +9,7 @@ exports.listar = async (req, res, conexao) => {
 
     try {
         const tags = await Tag.findAll({
-            // A cláusula "where" foi removida para buscar todas as tags existentes
+            // A cláusula "where" para usuario_id foi removida.
             order: [['nome', 'ASC']]
         });
         return res.status(200).json(tags);
