@@ -340,3 +340,34 @@ exports.buscaInteligente = async (req, res) => {
       });
   }
 };
+
+// --- NOVA FUNÇÃO DE BUSCA INTERNA ---
+exports.buscaInterna = async (req, res, conexao) => {
+    const { Musica } = conexao.models;
+    const { nome, artista } = req.query; // Recebe os dados como parâmetros de query
+
+    if (!nome || !artista) {
+        return res.status(400).json({ mensagem: "Nome da música e artista são necessários." });
+    }
+
+    try {
+        const musica = await Musica.findOne({
+            where: {
+                nome: { [Op.iLike]: nome },
+                artista: { [Op.iLike]: artista },
+                usuario_id: req.usuario.id
+            }
+        });
+
+        if (musica) {
+            console.log(`[Busca Interna] Música "${nome}" encontrada no banco de dados.`);
+            return res.status(200).json(musica);
+        } else {
+            return res.status(404).json({ mensagem: "Música não encontrada no banco de dados interno." });
+        }
+
+    } catch (error) {
+        console.error("Erro na busca interna:", error);
+        return res.status(500).json({ mensagem: "Erro interno do servidor." });
+    }
+};
