@@ -17,8 +17,11 @@ module.exports = (conexao) => {
   
   // --- ROTA POST QUE ESTAVA FALTANDO ---
   roteador.post('/usuarios', (req, res) => adminControlador.criarUsuario(req, res, conexao));
-
   roteador.delete('/usuarios/:id/dados', (req, res) => adminControlador.limparDadosUsuario(req, res, conexao));
+
+  roteador.get('/sugestoes', (req, res) => sugestaoControlador.listarSugestoesPendentes(req, res, conexao));
+  roteador.put('/sugestoes/:id/aprovar', (req, res) => sugestaoControlador.aprovarSugestao(req, res, conexao));
+  roteador.put('/sugestoes/:id/rejeitar', (req, res) => sugestaoControlador.rejeitarSugestao(req, res, conexao));
   
   return roteador;
 };

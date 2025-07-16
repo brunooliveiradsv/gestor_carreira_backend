@@ -15,6 +15,7 @@ const Setlist = require('../modelos/setlist.modelo.js');
 const Musica = require('../modelos/musica.modelo.js');
 const Tag = require('../modelos/tag.modelo.js');
 const SetlistMusica = require('../modelos/setlist_musica.modelo.js');
+const SugestaoMusica = require('../modelos/sugestao_musica.modelo.js');
 
 
 const conexao = new Sequelize(dbConfig);
@@ -33,6 +34,7 @@ const modelos = [
   Musica,
   Tag,
   SetlistMusica,
+  SugestaoMusica,
 ];
 
 // Inicializa cada modelo, passando a conexão

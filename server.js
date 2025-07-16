@@ -29,6 +29,7 @@ const equipamentoRotas = require('./src/rotas/equipamento.rotas.js');
 const tarefasAgendadas = require('./src/tarefas-agendadas');
 const musicaRotas = require("./src/rotas/musica.rotas.js");
 const tagRotas = require("./src/rotas/tag.rotas.js");
+const sugestaoRotas = require("./src/rotas/sugestao.rotas.js"); // Novo
 
 // Registro de todas as rotas da API
 app.use("/api/usuarios", usuarioRotas(conexao));
@@ -42,6 +43,7 @@ app.use('/api/notificacoes', notificacaoRotas(conexao));
 app.use('/api/equipamentos', equipamentoRotas(conexao));
 app.use("/api/musicas", musicaRotas(conexao));
 app.use("/api/tags", tagRotas(conexao));
+app.use("/api", sugestaoRotas(conexao));
 
 const PORTA = process.env.PORT || 3000;
 
