@@ -7,8 +7,7 @@ class Musica extends Model {
       nome: DataTypes.STRING,
       artista: DataTypes.STRING,
       tom: DataTypes.STRING,
-      // CORREÇÃO: O nome do campo foi atualizado para corresponder à base de dados.
-      duracao_minutos: DataTypes.STRING, 
+      duracao_minutos: DataTypes.STRING, // CORRETO
       bpm: DataTypes.INTEGER,
       link_cifra: DataTypes.STRING,
       notas_adicionais: DataTypes.TEXT,
@@ -22,20 +21,9 @@ class Musica extends Model {
 
   static associate(models) {
     this.belongsTo(models.Usuario, { foreignKey: "usuario_id", as: "usuario" });
-    this.belongsToMany(models.Tag, {
-      through: "musica_tags",
-      foreignKey: "musica_id",
-      as: "tags",
-    });
-    this.belongsToMany(models.Setlist, {
-      through: "setlist_musicas",
-      foreignKey: "musica_id",
-      as: "setlists",
-    });
-    this.hasMany(models.SugestaoMusica, {
-      foreignKey: "musica_id",
-      as: "sugestoes",
-    });
+    this.belongsToMany(models.Tag, { through: "musica_tags", foreignKey: "musica_id", as: "tags" });
+    this.belongsToMany(models.Setlist, { through: "setlist_musicas", foreignKey: "musica_id", as: "setlists" });
+    this.hasMany(models.SugestaoMusica, { foreignKey: "musica_id", as: "sugestoes" });
   }
 }
 
