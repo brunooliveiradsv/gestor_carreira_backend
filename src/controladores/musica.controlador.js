@@ -1,11 +1,10 @@
 // src/controladores/musica.controlador.js
 const { Op } = require("sequelize");
 
-// --- FUNÇÃO DE CRIAÇÃO ---
-// Limpa os dados de nome e artista antes de salvar para evitar espaços em branco.
+// --- FUNÇÃO DE CRIAÇÃO CORRIGIDA E COM DIAGNÓSTICO ---
 exports.criar = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
-  let {
+  const {
     nome,
     artista,
     tom,
@@ -23,7 +22,6 @@ exports.criar = async (req, res, conexao) => {
       .json({ mensagem: "Nome da música e artista são obrigatórios." });
   }
 
-  // LIMPEZA DOS DADOS (TRIM)
   const nomeLimpo = nome.trim();
   const artistaLimpo = artista.trim();
 
@@ -43,22 +41,35 @@ exports.criar = async (req, res, conexao) => {
       { transaction: t }
     );
 
-    if (tags && tags.length > 0) {
+    // Verifica se foram enviadas tags e se é um array com itens
+    if (tags && Array.isArray(tags) && tags.length > 0) {
+      console.log(
+        `[Criar Música] Recebidas ${tags.length} tags para associar:`,
+        tags
+      );
       const tagsParaAssociar = [];
       for (const nomeTag of tags) {
+        // Encontra ou cria a tag na base de dados
         const [tag] = await Tag.findOrCreate({
           where: { nome: nomeTag.trim(), usuario_id: usuarioId },
           transaction: t,
         });
         tagsParaAssociar.push(tag);
       }
+      console.log(
+        `[Criar Música] Associando as tags à música ID: ${novaMusica.id}`
+      );
+      // Usa o método do Sequelize para associar as tags à música
       await novaMusica.setTags(tagsParaAssociar, { transaction: t });
     }
 
     await t.commit();
+
+    // Recarrega a música com as suas associações para devolver a resposta completa
     const musicaCompleta = await Musica.findByPk(novaMusica.id, {
-      include: ["tags"],
+      include: [{ model: Tag, as: "tags", through: { attributes: [] } }],
     });
+
     return res.status(201).json(musicaCompleta);
   } catch (erro) {
     await t.rollback();
@@ -67,8 +78,9 @@ exports.criar = async (req, res, conexao) => {
   }
 };
 
-// --- FUNÇÃO DE LISTAGEM ---
-// Lista todas as músicas do usuário com filtros avançados.
+// --- O RESTO DO FICHEIRO PERMANECE IGUAL ---
+
+// Função de listagem
 exports.listar = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const usuarioId = req.usuario.id;
@@ -81,9 +93,7 @@ exports.listar = async (req, res, conexao) => {
       { artista: { [Op.iLike]: `%${termoBusca}%` } },
     ];
   }
-  if (tom) {
-    whereClause.tom = tom;
-  }
+  if (tom) whereClause.tom = tom;
   if (semTocarDesde) {
     whereClause[Op.or] = [
       { ultima_vez_tocada: { [Op.is]: null } },
@@ -92,9 +102,7 @@ exports.listar = async (req, res, conexao) => {
   }
 
   const orderClause = [];
-  if (popularidade === "desc") {
-    orderClause.push(["popularidade", "DESC"]);
-  }
+  if (popularidade === "desc") orderClause.push(["popularidade", "DESC"]);
   orderClause.push(["nome", "ASC"]);
 
   try {
@@ -111,7 +119,6 @@ exports.listar = async (req, res, conexao) => {
       ],
       order: orderClause,
     });
-
     return res.status(200).json(musicas);
   } catch (erro) {
     console.error("Erro ao listar músicas:", erro);
@@ -119,37 +126,31 @@ exports.listar = async (req, res, conexao) => {
   }
 };
 
-// --- FUNÇÃO DE BUSCA POR ID ---
-// Busca uma única música pelo seu ID.
+// Função de busca por ID
 exports.buscarPorId = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
-
   try {
     const musica = await Musica.findOne({
       where: { id, usuario_id: usuarioId },
       include: [{ model: Tag, as: "tags" }],
     });
-
-    if (!musica) {
+    if (!musica)
       return res.status(404).json({ mensagem: "Música não encontrada." });
-    }
     return res.status(200).json(musica);
   } catch (erro) {
     return res.status(500).json({ mensagem: "Erro ao buscar a música." });
   }
 };
 
-// --- FUNÇÃO DE ATUALIZAÇÃO ---
-// Atualiza os dados de uma música existente.
+// Função de atualização
 exports.atualizar = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
   const { tags, ...dadosMusica } = req.body;
   const t = await conexao.transaction();
-
   try {
     const musica = await Musica.findOne({
       where: { id, usuario_id: usuarioId },
@@ -159,9 +160,7 @@ exports.atualizar = async (req, res, conexao) => {
       await t.rollback();
       return res.status(404).json({ mensagem: "Música não encontrada." });
     }
-
     await musica.update(dadosMusica, { transaction: t });
-
     if (tags && Array.isArray(tags)) {
       const tagsParaAssociar = [];
       for (const nomeTag of tags) {
@@ -173,7 +172,6 @@ exports.atualizar = async (req, res, conexao) => {
       }
       await musica.setTags(tagsParaAssociar, { transaction: t });
     }
-
     await t.commit();
     const musicaAtualizada = await Musica.findByPk(id, { include: "tags" });
     return res.status(200).json(musicaAtualizada);
@@ -184,46 +182,37 @@ exports.atualizar = async (req, res, conexao) => {
   }
 };
 
-// --- FUNÇÃO DE APAGAR ---
-// Apaga uma música do banco de dados.
+// Função de apagar
 exports.apagar = async (req, res, conexao) => {
   const { Musica } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
-
   try {
     const deletado = await Musica.destroy({
       where: { id, usuario_id: usuarioId },
     });
-    if (deletado) {
-      return res.status(204).send();
-    }
+    if (deletado) return res.status(204).send();
     return res.status(404).json({ mensagem: "Música não encontrada." });
   } catch (erro) {
     return res.status(500).json({ mensagem: "Erro ao apagar música." });
   }
 };
 
-// --- FUNÇÃO PARA REGISTRAR "TOCAR" ---
-// Atualiza a data da última vez que a música foi tocada e aumenta sua popularidade.
+// Função para registrar "tocar"
 exports.tocarMusica = async (req, res, conexao) => {
   const { Musica } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
-
   try {
     const musica = await Musica.findOne({
       where: { id, usuario_id: usuarioId },
     });
-    if (!musica) {
+    if (!musica)
       return res.status(404).json({ mensagem: "Música não encontrada." });
-    }
-
     await musica.update({
       ultima_vez_tocada: new Date(),
       popularidade: musica.popularidade + 1,
     });
-
     return res.status(200).json(musica);
   } catch (erro) {
     console.error("Erro ao registrar 'tocar música':", erro);
@@ -231,23 +220,17 @@ exports.tocarMusica = async (req, res, conexao) => {
   }
 };
 
-// --- FUNÇÃO DE BUSCA INTERNA ---
-// Procura na base de dados pessoal do usuário antes de buscar na internet.
-// Usa iLike para ser insensível a maiúsculas/minúsculas e trim para limpar os dados.
+// Função de busca interna
 exports.buscaInterna = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const { nome, artista } = req.query;
-
-  if (!nome || !artista) {
+  if (!nome || !artista)
     return res
       .status(400)
       .json({ mensagem: "Nome da música e artista são necessários." });
-  }
-
   try {
     const nomeLimpo = nome.trim();
     const artistaLimpo = artista.trim();
-
     const musica = await Musica.findOne({
       where: {
         nome: { [Op.iLike]: nomeLimpo },
@@ -256,7 +239,6 @@ exports.buscaInterna = async (req, res, conexao) => {
       },
       include: [{ model: Tag, as: "tags" }],
     });
-
     if (musica) {
       console.log(
         `[Busca Interna] Música "${nomeLimpo}" encontrada no banco de dados.`
