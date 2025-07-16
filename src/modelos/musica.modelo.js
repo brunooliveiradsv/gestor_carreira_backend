@@ -5,15 +5,15 @@ class Musica extends Model {
   static init(sequelize) {
     super.init(
       {
-        nome: DataTypes.STRING,
-        artista: DataTypes.STRING,
-        tom: DataTypes.STRING,
-        duracao_segundos: DataTypes.INTEGER,
-        bpm: DataTypes.INTEGER,
-        link_cifra: DataTypes.STRING,
-        notas_adicionais: DataTypes.TEXT,
-        popularidade: DataTypes.INTEGER,
-        ultima_vez_tocada: DataTypes.DATE,
+      nome: DataTypes.STRING,
+      artista: DataTypes.STRING,
+      tom: DataTypes.STRING,
+      duracao_segundos: DataTypes.INTEGER,
+      bpm: DataTypes.INTEGER, // Garanta que esta linha existe
+      link_cifra: DataTypes.STRING,
+      notas_adicionais: DataTypes.TEXT,
+      popularidade: DataTypes.INTEGER,
+      ultima_vez_tocada: DataTypes.DATE,
       },
       {
         sequelize,
