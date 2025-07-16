@@ -6,7 +6,7 @@ const { Op } = require("sequelize");
 exports.criar = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const {
-    nome, artista, tom, duracao_segundos, bpm, link_cifra, notas_adicionais, tagIds,
+    nome, artista, tom, duracao_minutos, bpm, link_cifra, notas_adicionais, tagIds,
   } = req.body;
   const usuarioId = req.usuario.id;
 
@@ -17,7 +17,7 @@ exports.criar = async (req, res, conexao) => {
   const t = await conexao.transaction();
   try {
     const novaMusica = await Musica.create({
-      nome: nome.trim(), artista: artista.trim(), tom, duracao_segundos, bpm, link_cifra, notas_adicionais, usuario_id: usuarioId,
+      nome: nome.trim(), artista: artista.trim(), tom, duracao_minutos, bpm, link_cifra, notas_adicionais, usuario_id: usuarioId,
     }, { transaction: t });
 
     if (tagIds && Array.isArray(tagIds) && tagIds.length > 0) {
