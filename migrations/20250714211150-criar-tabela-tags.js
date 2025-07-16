@@ -3,6 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // A função 'up' já está correta
     await queryInterface.createTable('tags', {
       id: {
         type: Sequelize.INTEGER,
@@ -13,7 +14,7 @@ module.exports = {
       nome: {
         type: Sequelize.STRING,
         allowNull: false,
-        unique: true, // Garante que não haverá tags com o mesmo nome
+        unique: true,
       },
       created_at: {
         type: Sequelize.DATE,
@@ -25,7 +26,12 @@ module.exports = {
       },
     });
   },
+
   async down(queryInterface, Sequelize) {
+    // --- CORREÇÃO APLICADA AQUI ---
+    // Antes de apagar a tabela 'tags', apagamos a tabela 'musica_tags' que depende dela.
+    // Isto resolve a restrição de chave estrangeira (foreign key).
+    await queryInterface.dropTable('musica_tags');
     await queryInterface.dropTable('tags');
   }
 };
