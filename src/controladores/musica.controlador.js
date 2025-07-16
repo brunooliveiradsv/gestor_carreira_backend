@@ -1,7 +1,7 @@
 // src/controladores/musica.controlador.js
 const { Op } = require("sequelize");
 
-// --- FUNÇÃO DE CRIAÇÃO (permanece a mesma, já está correta) ---
+// --- FUNÇÃO DE CRIAÇÃO (REVISADA) ---
 exports.criar = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const {
@@ -12,9 +12,11 @@ exports.criar = async (req, res, conexao) => {
     bpm,
     link_cifra,
     notas_adicionais,
-    tags,
+    tags, // Recebe o array de nomes de tags
   } = req.body;
   const usuarioId = req.usuario.id;
+
+  console.log("Recebido para criar:", req.body); // Para depuração
 
   if (!nome || !artista) {
     return res
@@ -22,15 +24,12 @@ exports.criar = async (req, res, conexao) => {
       .json({ mensagem: "Nome da música e artista são obrigatórios." });
   }
 
-  const nomeLimpo = nome.trim();
-  const artistaLimpo = artista.trim();
-
   const t = await conexao.transaction();
   try {
     const novaMusica = await Musica.create(
       {
-        nome: nomeLimpo,
-        artista: artistaLimpo,
+        nome: nome.trim(),
+        artista: artista.trim(),
         tom,
         duracao_segundos,
         bpm,
@@ -41,19 +40,23 @@ exports.criar = async (req, res, conexao) => {
       { transaction: t }
     );
 
+    // Se foram enviadas tags, processa-as
     if (tags && Array.isArray(tags) && tags.length > 0) {
       const tagsParaAssociar = [];
       for (const nomeTag of tags) {
+        // Encontra ou cria a tag para o utilizador
         const [tag] = await Tag.findOrCreate({
           where: { nome: nomeTag.trim(), usuario_id: usuarioId },
           transaction: t,
         });
         tagsParaAssociar.push(tag);
       }
+      // Associa as tags encontradas/criadas à nova música
       await novaMusica.setTags(tagsParaAssociar, { transaction: t });
     }
 
     await t.commit();
+    // Devolve a música recém-criada, incluindo as suas tags associadas
     const musicaCompleta = await Musica.findByPk(novaMusica.id, {
       include: ["tags"],
     });
@@ -65,12 +68,16 @@ exports.criar = async (req, res, conexao) => {
   }
 };
 
-// --- FUNÇÃO DE ATUALIZAÇÃO (CORRIGIDA) ---
+// --- FUNÇÃO DE ATUALIZAÇÃO (REVISADA) ---
 exports.atualizar = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
+  // Separa as tags do resto dos dados da música
   const { tags, ...dadosMusica } = req.body;
+  
+  console.log("Recebido para atualizar:", req.body); // Para depuração
+
   const t = await conexao.transaction();
 
   try {
@@ -83,7 +90,7 @@ exports.atualizar = async (req, res, conexao) => {
       return res.status(404).json({ mensagem: "Música não encontrada." });
     }
 
-    // 1. Atualiza os dados principais da música
+    // 1. Atualiza os dados principais da música (nome, artista, etc.)
     await musica.update(dadosMusica, { transaction: t });
 
     // 2. Lida com as tags de forma explícita
@@ -96,7 +103,7 @@ exports.atualizar = async (req, res, conexao) => {
         });
         tagsParaAssociar.push(tag);
       }
-      // O método 'setTags' do Sequelize remove todas as associações antigas
+      // O método 'setTags' remove todas as associações antigas
       // e cria as novas. É a forma mais segura de garantir a sincronização.
       await musica.setTags(tagsParaAssociar, { transaction: t });
     } else if (tags === null || (Array.isArray(tags) && tags.length === 0)) {
@@ -116,7 +123,7 @@ exports.atualizar = async (req, res, conexao) => {
   }
 };
 
-// Função de listagem
+// (As outras funções do controlador como 'listar', 'buscarPorId', etc. permanecem as mesmas)
 exports.listar = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const usuarioId = req.usuario.id;
@@ -162,7 +169,6 @@ exports.listar = async (req, res, conexao) => {
   }
 };
 
-// Função de busca por ID
 exports.buscarPorId = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const { id } = req.params;
@@ -180,7 +186,6 @@ exports.buscarPorId = async (req, res, conexao) => {
   }
 };
 
-// Função de apagar
 exports.apagar = async (req, res, conexao) => {
   const { Musica } = conexao.models;
   const { id } = req.params;
@@ -196,7 +201,6 @@ exports.apagar = async (req, res, conexao) => {
   }
 };
 
-// Função para registrar "tocar"
 exports.tocarMusica = async (req, res, conexao) => {
   const { Musica } = conexao.models;
   const { id } = req.params;
@@ -218,7 +222,6 @@ exports.tocarMusica = async (req, res, conexao) => {
   }
 };
 
-// Função de busca interna
 exports.buscaInterna = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const { nome, artista } = req.query;
