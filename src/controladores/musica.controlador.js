@@ -1,9 +1,7 @@
 // src/controladores/musica.controlador.js
 const { Op } = require("sequelize");
 
-// A função 'criar' não precisa de alterações, mas é incluída para manter o ficheiro completo
 exports.criar = async (req, res, conexao) => {
-  console.log("[DEBUG] Início de 'criar' com o corpo:", req.body);
   const { Musica, Tag } = conexao.models;
   const {
     nome, artista, tom, duracao_segundos, bpm, link_cifra, notas_adicionais, tags,
@@ -23,20 +21,16 @@ exports.criar = async (req, res, conexao) => {
       { transaction: t }
     );
 
-    if (tags && Array.isArray(tags)) {
-      console.log("[DEBUG] Processando tags para nova música:", tags);
+    if (tags && Array.isArray(tags) && tags.length > 0) {
       const tagsParaAssociar = [];
-      if (tags.length > 0) {
-        for (const nomeTag of tags) {
-          const [tag] = await Tag.findOrCreate({
-            where: { nome: nomeTag.trim(), usuario_id: usuarioId },
-            transaction: t,
-          });
-          tagsParaAssociar.push(tag);
-        }
+      for (const nomeTag of tags) {
+        const [tag] = await Tag.findOrCreate({
+          where: { nome: nomeTag.trim(), usuario_id: usuarioId },
+          transaction: t,
+        });
+        tagsParaAssociar.push(tag);
       }
       await novaMusica.setTags(tagsParaAssociar, { transaction: t });
-      console.log("[DEBUG] Tags para nova música associadas com sucesso.");
     }
 
     await t.commit();
@@ -49,10 +43,7 @@ exports.criar = async (req, res, conexao) => {
   }
 };
 
-
-// --- FUNÇÃO ATUALIZAR (COM A CORREÇÃO) ---
 exports.atualizar = async (req, res, conexao) => {
-  console.log(`[DEBUG] Início de 'atualizar' para ID ${req.params.id} com o corpo:`, req.body);
   const { Musica, Tag } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
@@ -66,15 +57,9 @@ exports.atualizar = async (req, res, conexao) => {
       return res.status(404).json({ mensagem: "Música não encontrada." });
     }
 
-    // 1. Atualiza os dados principais da música
     await musica.update(dadosMusica, { transaction: t });
-    console.log("[DEBUG] Dados principais da música atualizados.");
 
-    // 2. Garante que o array de tags seja sempre processado.
-    // O método setTags do Sequelize é inteligente: ele remove as associações que não estão no novo array
-    // e adiciona as novas, fazendo a sincronização completa.
     if (Array.isArray(tags)) {
-      console.log("[DEBUG] Sincronizando tags:", tags);
       const tagsParaAssociar = [];
       if (tags.length > 0) {
         for (const nomeTag of tags) {
@@ -85,15 +70,10 @@ exports.atualizar = async (req, res, conexao) => {
           tagsParaAssociar.push(tag);
         }
       }
-      // Esta é a linha crucial. Ela vai associar o novo array de tags à música.
       await musica.setTags(tagsParaAssociar, { transaction: t });
-      console.log("[DEBUG] Sincronização de tags concluída.");
-    } else {
-        console.log("[DEBUG] Nenhum array de tags foi fornecido no pedido. As tags não serão alteradas.");
     }
 
     await t.commit();
-    console.log("[DEBUG] Transação concluída com sucesso.");
     const musicaAtualizada = await Musica.findByPk(id, { include: "tags" });
     return res.status(200).json(musicaAtualizada);
   } catch (erro) {
@@ -103,8 +83,7 @@ exports.atualizar = async (req, res, conexao) => {
   }
 };
 
-
-// O resto das funções permanece igual...
+// As outras funções (listar, buscarPorId, etc.) permanecem as mesmas
 exports.listar = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const usuarioId = req.usuario.id;
