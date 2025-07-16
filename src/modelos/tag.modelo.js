@@ -12,8 +12,7 @@ class Tag extends Model {
   }
 
   static associate(models) {
-    // A associação com Usuario foi REMOVIDA
-    // A tag agora pertence a muitas músicas
+    // A tag agora pertence a muitas músicas, mas não a um utilizador
     this.belongsToMany(models.Musica, { through: 'musica_tags', foreignKey: 'tag_id', as: 'musicas' });
   }
 }

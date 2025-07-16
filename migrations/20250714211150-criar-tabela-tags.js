@@ -1,3 +1,4 @@
+// migrations/20250714211150-criar-tabela-tags.js
 'use strict';
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
@@ -9,16 +10,10 @@ module.exports = {
         autoIncrement: true,
         allowNull: false,
       },
-      usuario_id: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: { model: 'usuarios', key: 'id' },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
-      },
       nome: {
         type: Sequelize.STRING,
         allowNull: false,
+        unique: true, // Garante que não haverá tags com o mesmo nome
       },
       created_at: {
         type: Sequelize.DATE,
@@ -28,12 +23,6 @@ module.exports = {
         type: Sequelize.DATE,
         allowNull: false,
       },
-    });
-    // Adiciona um índice único para garantir que um usuário não tenha a mesma tag duas vezes
-    await queryInterface.addConstraint('tags', {
-      fields: ['usuario_id', 'nome'],
-      type: 'unique',
-      name: 'unique_tag_por_usuario'
     });
   },
   async down(queryInterface, Sequelize) {
