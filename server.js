@@ -11,7 +11,7 @@ const app = express();
 
 // Configuração do CORS para permitir o acesso do seu frontend
 const corsOptions = {
-  origin: 'https://voxgest.vercel.app',
+ origin: ['https://voxgest.vercel.app', 'http://localhost:5173'], 
   optionsSuccessStatus: 200
 };
 
