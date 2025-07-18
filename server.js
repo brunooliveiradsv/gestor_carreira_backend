@@ -1,15 +1,26 @@
 // server.js
-require('dotenv').config(); // ADICIONE ESTA LINHA AQUI!
-
-console.log('--- INICIANDO TESTE DE DEBUG ---');
-console.log(`[DEBUG] DATABASE_URL no arranque: ${process.env.DATABASE_URL}`);
+require('dotenv').config();
 const express = require("express");
+const path = require('path');
+const fs = require('fs'); // Módulo para interagir com o sistema de arquivos
 const conexao = require("./src/database");
 const cors = require("cors");
 
 const app = express();
 
-// Configuração do CORS para permitir o acesso do seu frontend
+// --- NOVA LÓGICA PARA CRIAR PASTA DE UPLOADS ---
+// Define o caminho absoluto para a pasta de uploads
+const diretorioDeUploads = path.resolve(__dirname, 'tmp', 'uploads');
+
+// Verifica se o diretório não existe
+if (!fs.existsSync(diretorioDeUploads)) {
+  // Cria o diretório recursivamente (cria 'tmp' e 'uploads' se necessário)
+  fs.mkdirSync(diretorioDeUploads, { recursive: true });
+  console.log(`✅ Diretório de uploads criado em: ${diretorioDeUploads}`);
+}
+// --- FIM DA NOVA LÓGICA ---
+
+// Configuração do CORS
 const corsOptions = {
  origin: ['https://voxgest.vercel.app', 'http://localhost:5173'], 
   optionsSuccessStatus: 200
@@ -18,12 +29,15 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Servir arquivos estáticos da pasta de uploads
+app.use('/uploads', express.static(diretorioDeUploads));
+
 // Importação de todas as rotas da sua API
 const usuarioRotas = require("./src/rotas/usuario.rotas.js");
 const compromissoRotas = require("./src/rotas/compromisso.rotas.js");
 const financeiroRotas = require("./src/rotas/financeiro.rotas.js");
 const contatoRotas = require("./src/rotas/contato.rotas.js");
-const setlistRotas = require("./src/rotas/setlist.rotas.js"); // Nova linha
+const setlistRotas = require("./src/rotas/setlist.rotas.js");
 const conquistaRotas = require('./src/rotas/conquista.rotas.js');
 const adminRotas = require("./src/rotas/admin.rotas.js");
 const notificacaoRotas = require('./src/rotas/notificacao.rotas.js');
@@ -31,7 +45,7 @@ const equipamentoRotas = require('./src/rotas/equipamento.rotas.js');
 const tarefasAgendadas = require('./src/tarefas-agendadas');
 const musicaRotas = require("./src/rotas/musica.rotas.js");
 const tagRotas = require("./src/rotas/tag.rotas.js");
-const sugestaoRotas = require("./src/rotas/sugestao.rotas.js"); // Novo
+const sugestaoRotas = require("./src/rotas/sugestao.rotas.js");
 
 // Registro de todas as rotas da API
 app.use("/api/usuarios", usuarioRotas(conexao));

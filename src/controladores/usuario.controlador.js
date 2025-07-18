@@ -4,6 +4,37 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto'); // Módulo nativo do Node.js para criptografia
 const emailServico = require('../servicos/email.servico'); // Nosso novo serviço de e-mail
 
+
+exports.atualizarFoto = async (req, res, conexao) => {
+  const { Usuario } = conexao.models;
+  const usuarioId = req.usuario.id;
+
+  if (!req.file) {
+    return res.status(400).json({ mensagem: 'Nenhum arquivo de imagem foi enviado.' });
+  }
+
+  // O caminho do arquivo salvo pelo multer. 
+  // Em um ambiente de produção real, você salvaria em um bucket (S3, GCS) 
+  // e obteria a URL pública. Para este exemplo, usamos o caminho local.
+  const fotoUrl = `/uploads/${req.file.filename}`;
+
+  try {
+    const [updated] = await Usuario.update({ foto_url: fotoUrl }, {
+      where: { id: usuarioId }
+    });
+
+    if (updated) {
+      const usuarioAtualizado = await Usuario.findByPk(usuarioId, { attributes: { exclude: ['senha'] } });
+      return res.status(200).json(usuarioAtualizado);
+    }
+    
+    return res.status(404).json({ mensagem: "Usuário não encontrado." });
+  } catch (error) {
+    console.error("Erro ao atualizar a foto de perfil:", error);
+    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor ao salvar a foto." });
+  }
+};
+
 exports.registrar = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const { nome, email, senha } = req.body;
