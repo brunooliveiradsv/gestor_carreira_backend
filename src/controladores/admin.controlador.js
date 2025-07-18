@@ -55,14 +55,14 @@ exports.apagarUsuario = async (req, res, conexao) => {
 };
 
 exports.limparDadosUsuario = async (req, res, conexao) => {
-  // Pega todos os modelos que serão afetados, incluindo Equipamento
   const {
     Compromisso,
     Transacao,
     Contato,
-    Repertorio,
+    Setlist,
     UsuarioConquista,
     Equipamento,
+    Musica // <-- ADICIONADO
   } = conexao.models;
   const { id } = req.params;
 
@@ -71,18 +71,17 @@ exports.limparDadosUsuario = async (req, res, conexao) => {
   try {
     console.log(`Iniciando limpeza de dados completa para o usuário ID: ${id}`);
 
-    // Apaga os dados de todas as tabelas associadas, dentro da mesma transação
+    // Apaga os dados de todas as tabelas associadas
     await Compromisso.destroy({ where: { usuario_id: id }, transaction: t });
     await Transacao.destroy({ where: { usuario_id: id }, transaction: t });
     await Contato.destroy({ where: { usuario_id: id }, transaction: t });
-    await Repertorio.destroy({ where: { usuario_id: id }, transaction: t });
-    await UsuarioConquista.destroy({
-      where: { usuario_id: id },
-      transaction: t,
-    });
-
-    // --- LINHA NOVA E CORRIGIDA ---
+    await Setlist.destroy({ where: { usuario_id: id }, transaction: t });
+    await UsuarioConquista.destroy({ where: { usuario_id: id }, transaction: t });
     await Equipamento.destroy({ where: { usuario_id: id }, transaction: t });
+    
+    // --- LINHA CORRIGIDA ---
+    // Agora também apaga todas as músicas do repertório pessoal do usuário
+    await Musica.destroy({ where: { usuario_id: id }, transaction: t });
 
     await t.commit();
 
@@ -97,7 +96,6 @@ exports.limparDadosUsuario = async (req, res, conexao) => {
   }
 };
 
-// --- FUNÇÃO DE CRIAR USUÁRIO ---
 exports.criarUsuario = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const { nome, email, senha, role } = req.body;

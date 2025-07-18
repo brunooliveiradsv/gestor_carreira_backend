@@ -13,6 +13,7 @@ module.exports = (conexao) => {
   roteador.get('/', (req, res) => musicaMestreControlador.listar(req, res, conexao));
   roteador.post('/', (req, res) => musicaMestreControlador.criar(req, res, conexao));
   roteador.put('/:id', (req, res) => musicaMestreControlador.atualizar(req, res, conexao));
+  roteador.delete('/:id', (req, res) => musicaMestreControlador.apagar(req, res, conexao));
   
   return roteador;
 };

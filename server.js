@@ -36,7 +36,6 @@ const equipamentoRotas = require('./src/rotas/equipamento.rotas.js');
 const tarefasAgendadas = require('./src/tarefas-agendadas');
 const musicaRotas = require("./src/rotas/musica.rotas.js");
 const tagRotas = require("./src/rotas/tag.rotas.js");
-const sugestaoRotas = require("./src/rotas/sugestao.rotas.js");
 const vitrineRotas = require("./src/rotas/vitrine.rotas.js");
 const musicaMestreRotas = require("./src/rotas/musica_mestre.rotas.js");
 
@@ -50,12 +49,10 @@ app.use('/api/conquistas', conquistaRotas(conexao));
 app.use("/api/admin", adminRotas(conexao));
 app.use('/api/notificacoes', notificacaoRotas(conexao));
 app.use('/api/equipamentos', equipamentoRotas(conexao));
-app.use("/api/musicas", musicaRotas(conexao));
+app.use("/api/musicas", musicaRotas(conexao)); // Agora inclui a rota de sugestão
 app.use("/api/tags", tagRotas(conexao));
 app.use("/api/vitrine", vitrineRotas(conexao));
 app.use("/api/admin/musicas", musicaMestreRotas(conexao));
-// CORREÇÃO: A rota de sugestões agora é mais específica e foi movida para o final
-app.use("/api/sugestoes", sugestaoRotas(conexao));
 
 const PORTA = process.env.PORT || 3000;
 
