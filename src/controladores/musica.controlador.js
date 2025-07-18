@@ -1,136 +1,141 @@
 // src/controladores/musica.controlador.js
 const { Op } = require("sequelize");
 
-// --- FUNÇÕES CRIAR E ATUALIZAR CORRIGIDAS ---
-
-exports.criar = async (req, res, conexao) => {
-  const { Musica, Tag } = conexao.models;
-  const {
-    nome, artista, tom, duracao_minutos, bpm, link_cifra, notas_adicionais, tagIds,
-  } = req.body;
+// Usuário: Lista as músicas do SEU repertório (cópias e criações próprias)
+exports.listarRepertorioUsuario = async (req, res, conexao) => {
+  const { Musica } = conexao.models;
   const usuarioId = req.usuario.id;
-
-  if (!nome || !artista) {
-    return res.status(400).json({ mensagem: "Nome da música e artista são obrigatórios." });
-  }
-
-  const t = await conexao.transaction();
-  try {
-    const novaMusica = await Musica.create({
-      nome: nome.trim(), artista: artista.trim(), tom, duracao_minutos, bpm, link_cifra, notas_adicionais, usuario_id: usuarioId,
-    }, { transaction: t });
-
-    if (tagIds && Array.isArray(tagIds) && tagIds.length > 0) {
-      await novaMusica.setTags(tagIds, { transaction: t });
-    }
-
-    await t.commit();
-    const musicaCompleta = await Musica.findByPk(novaMusica.id, { include: ["tags"] });
-    return res.status(201).json(musicaCompleta);
-  } catch (erro) {
-    await t.rollback();
-    console.error("Erro ao criar música:", erro);
-    return res.status(500).json({ mensagem: "Erro ao criar a música." });
-  }
-};
-
-exports.atualizar = async (req, res, conexao) => {
-  const { Musica, Tag } = conexao.models; // Apenas Musica é necessário aqui
-  const { id } = req.params;
-  const usuarioId = req.usuario.id;
-  const { tagIds, ...dadosMusica } = req.body;
-  const t = await conexao.transaction();
-
-  try {
-    const musica = await Musica.findOne({ where: { id, usuario_id: usuarioId }, transaction: t });
-    if (!musica) {
-      await t.rollback();
-      return res.status(404).json({ mensagem: "Música não encontrada." });
-    }
-
-    await musica.update(dadosMusica, { transaction: t });
-
-    // A lógica de `findOrCreate` foi removida das funções de criar/atualizar música.
-    // O backend agora assume que os IDs das tags fornecidas pelo frontend já existem.
-    if (Array.isArray(tagIds)) {
-      await musica.setTags(tagIds, { transaction: t });
-    }
-
-    await t.commit();
-    const musicaAtualizada = await Musica.findByPk(id, { include: "tags" });
-    return res.status(200).json(musicaAtualizada);
-  } catch (erro) {
-    await t.rollback();
-    console.error("Erro ao atualizar música:", erro);
-    return res.status(500).json({ mensagem: "Erro ao atualizar a música." });
-  }
-};
-
-
-// --- RESTANTE DO FICHEIRO (SEM ALTERAÇÕES) ---
-
-exports.listar = async (req, res, conexao) => {
-  const { Musica, Tag } = conexao.models;
-  const usuarioId = req.usuario.id;
-  const { termoBusca, tom, tags, semTocarDesde, popularidade } = req.query;
-
-  const whereClause = { usuario_id: usuarioId };
-  if (termoBusca) {
-    whereClause[Op.or] = [
-      { nome: { [Op.iLike]: `%${termoBusca}%` } },
-      { artista: { [Op.iLike]: `%${termoBusca}%` } },
-    ];
-  }
-  if (tom) whereClause.tom = tom;
-  if (semTocarDesde) {
-    whereClause[Op.or] = [
-      { ultima_vez_tocada: { [Op.is]: null } },
-      { ultima_vez_tocada: { [Op.lt]: new Date(semTocarDesde) } },
-    ];
-  }
-
-  const orderClause = [];
-  if (popularidade === "desc") orderClause.push(["popularidade", "DESC"]);
-  orderClause.push(["nome", "ASC"]);
-
   try {
     const musicas = await Musica.findAll({
-      where: whereClause,
-      include: [
-        {
-          model: Tag,
-          as: "tags",
-          attributes: ["id", "nome"],
-          ...(tags && { where: { id: { [Op.in]: tags.split(",") } } }),
-          through: { attributes: [] },
-        },
+      where: { usuario_id: usuarioId },
+      include: ["musica_mestre"], // Inclui os dados da música original, se for uma cópia
+      order: [
+        ["artista", "ASC"],
+        ["nome", "ASC"],
       ],
-      order: orderClause,
     });
     return res.status(200).json(musicas);
   } catch (erro) {
-    console.error("Erro ao listar músicas:", erro);
-    return res.status(500).json({ mensagem: "Erro ao listar as músicas." });
+    console.error("Erro ao listar repertório do usuário:", erro);
+    return res.status(500).json({ mensagem: "Erro ao listar seu repertório." });
   }
 };
 
-exports.buscarPorId = async (req, res, conexao) => {
-  const { Musica, Tag } = conexao.models;
+// Usuário: Busca no banco de dados PÚBLICO de músicas
+exports.buscarMusicasPublicas = async (req, res, conexao) => {
+  const { Musica } = conexao.models;
+  const { termoBusca = "" } = req.query;
+  try {
+    const musicas = await Musica.findAll({
+      where: {
+        is_publica: true,
+        master_id: null, // Apenas músicas mestre
+        [Op.or]: [
+          { nome: { [Op.iLike]: `%${termoBusca}%` } },
+          { artista: { [Op.iLike]: `%${termoBusca}%` } },
+        ],
+      },
+      limit: 20,
+      order: [
+        ["artista", "ASC"],
+        ["nome", "ASC"],
+      ],
+    });
+    return res.status(200).json(musicas);
+  } catch (error) {
+    console.error("Erro ao buscar músicas públicas:", error);
+    return res
+      .status(500)
+      .json({ mensagem: "Erro ao buscar no banco de dados de músicas." });
+  }
+};
+
+// Usuário: Cria uma música manual no seu repertório
+exports.criarManual = async (req, res, conexao) => {
+  const { Musica } = conexao.models;
+  const { nome, artista, tom, notas_adicionais } = req.body;
+  if (!nome || !artista) {
+    return res
+      .status(400)
+      .json({ mensagem: "Nome e artista são obrigatórios." });
+  }
+  try {
+    const novaMusica = await Musica.create({
+      nome,
+      artista,
+      tom,
+      notas_adicionais,
+      usuario_id: req.usuario.id,
+      master_id: null, // É uma criação própria, não tem mestre
+      is_publica: false,
+    });
+    return res.status(201).json(novaMusica);
+  } catch (error) {
+    console.error("Erro ao criar música manual:", erro);
+    return res.status(500).json({ mensagem: "Erro ao criar música manual." });
+  }
+};
+
+// Usuário: Importa uma música do banco de dados para o seu repertório
+exports.importar = async (req, res, conexao) => {
+  const { Musica } = conexao.models;
+  const { master_id } = req.body;
+  const usuarioId = req.usuario.id;
+
+  try {
+    const musicaMestre = await Musica.findOne({
+      where: { id: master_id, is_publica: true, master_id: null },
+    });
+    if (!musicaMestre) {
+      return res
+        .status(404)
+        .json({
+          mensagem: "Música do banco de dados não encontrada ou não é pública.",
+        });
+    }
+
+    // Cria uma cópia da música mestre para o usuário
+    const novaCopia = await Musica.create({
+      nome: musicaMestre.nome,
+      artista: musicaMestre.artista,
+      tom: musicaMestre.tom,
+      bpm: musicaMestre.bpm,
+      link_cifra: musicaMestre.link_cifra,
+      // ... outros campos que queira copiar
+      usuario_id: usuarioId,
+      master_id: musicaMestre.id, // Linka a cópia à música mestre
+      is_publica: false,
+    });
+    return res.status(201).json(novaCopia);
+  } catch (error) {
+    console.error("Erro ao importar música:", error);
+    return res.status(500).json({ mensagem: "Erro ao importar música." });
+  }
+};
+
+// Usuário: Atualiza uma música do SEU repertório
+exports.atualizar = async (req, res, conexao) => {
+  const { Musica } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
   try {
-    const musica = await Musica.findOne({
+    const [updated] = await Musica.update(req.body, {
       where: { id, usuario_id: usuarioId },
-      include: [{ model: Tag, as: "tags" }],
     });
-    if (!musica)
-      return res.status(404).json({ mensagem: "Música não encontrada." });
-    return res.status(200).json(musica);
-  } catch (erro) {
-    return res.status(500).json({ mensagem: "Erro ao buscar a música." });
+    if (updated) {
+      const musicaAtualizada = await Musica.findByPk(id);
+      return res.status(200).json(musicaAtualizada);
+    }
+    return res
+      .status(404)
+      .json({ mensagem: "Música não encontrada no seu repertório." });
+  } catch (error) {
+    console.error("Erro ao atualizar música:", erro);
+    return res.status(500).json({ mensagem: "Erro ao atualizar música." });
   }
 };
 
+// Usuário: Apaga uma música do SEU repertório
 exports.apagar = async (req, res, conexao) => {
   const { Musica } = conexao.models;
   const { id } = req.params;
@@ -139,61 +144,14 @@ exports.apagar = async (req, res, conexao) => {
     const deletado = await Musica.destroy({
       where: { id, usuario_id: usuarioId },
     });
-    if (deletado) return res.status(204).send();
-    return res.status(404).json({ mensagem: "Música não encontrada." });
-  } catch (erro) {
-    return res.status(500).json({ mensagem: "Erro ao apagar música." });
-  }
-};
-
-exports.tocarMusica = async (req, res, conexao) => {
-  const { Musica } = conexao.models;
-  const { id } = req.params;
-  const usuarioId = req.usuario.id;
-  try {
-    const musica = await Musica.findOne({
-      where: { id, usuario_id: usuarioId },
-    });
-    if (!musica)
-      return res.status(404).json({ mensagem: "Música não encontrada." });
-    await musica.update({
-      ultima_vez_tocada: new Date(),
-      popularidade: musica.popularidade + 1,
-    });
-    return res.status(200).json(musica);
-  } catch (erro) {
-    console.error("Erro ao registrar 'tocar música':", erro);
-    return res.status(500).json({ mensagem: "Erro ao registrar a ação." });
-  }
-};
-
-exports.buscaInterna = async (req, res, conexao) => {
-  const { Musica, Tag } = conexao.models;
-  const { nome, artista } = req.query;
-  if (!nome || !artista)
-    return res
-      .status(400)
-      .json({ mensagem: "Nome da música e artista são necessários." });
-  try {
-    const nomeLimpo = nome.trim();
-    const artistaLimpo = artista.trim();
-    const musica = await Musica.findOne({
-      where: {
-        nome: { [Op.iLike]: nomeLimpo },
-        artista: { [Op.iLike]: artistaLimpo },
-        usuario_id: req.usuario.id,
-      },
-      include: [{ model: Tag, as: "tags" }],
-    });
-    if (musica) {
-      return res.status(200).json(musica);
-    } else {
-      return res
-        .status(404)
-        .json({ mensagem: "Música não encontrada no banco de dados interno." });
+    if (deletado) {
+      return res.status(204).send();
     }
-  } catch (error) {
-    console.error("Erro na busca interna:", error);
-    return res.status(500).json({ mensagem: "Erro interno do servidor." });
+    return res
+      .status(404)
+      .json({ mensagem: "Música não encontrada no seu repertório." });
+  } catch (erro) {
+    console.error("Erro ao apagar música:", erro);
+    return res.status(500).json({ mensagem: "Erro ao apagar música." });
   }
 };

@@ -8,7 +8,11 @@ class Usuario extends Model {
       email: DataTypes.STRING,
       senha: DataTypes.STRING,
       role: DataTypes.STRING,
-      foto_url: DataTypes.STRING, // <-- NOVO CAMPO
+      foto_url: DataTypes.STRING,
+      biografia: DataTypes.TEXT,
+      url_unica: DataTypes.STRING,
+      aplausos: DataTypes.INTEGER, // <-- NOVO
+       links_redes: DataTypes.JSONB,
     }, { sequelize, tableName: 'usuarios' })
   }
   

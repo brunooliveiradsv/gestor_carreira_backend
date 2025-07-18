@@ -27,7 +27,6 @@ exports.listar = async (req, res, conexao) => {
   }
 };
 
-// --- FUNÇÃO NOVA ---
 exports.buscarPorId = async (req, res, conexao) => {
   const { Contato } = conexao.models;
   const idDoContato = req.params.id;
@@ -74,6 +73,41 @@ exports.apagar = async (req, res, conexao) => {
     return res.status(404).json({ mensagem: "Contato não encontrado ou não pertence ao usuário." });
   } catch (erro) {
     console.error("Erro ao apagar contato:", erro);
+    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
+  }
+};
+
+// --- FUNÇÃO ADICIONADA ---
+exports.definirComoPublico = async (req, res, conexao) => {
+  const { Contato } = conexao.models;
+  const { id } = req.params; // ID do contato a ser destacado
+  const usuarioId = req.usuario.id;
+  const t = await conexao.transaction(); // Inicia uma transação para garantir a consistência
+
+  try {
+    // Passo 1: Marca TODOS os contatos deste usuário como não-públicos
+    await Contato.update(
+      { publico: false },
+      { where: { usuario_id: usuarioId }, transaction: t }
+    );
+
+    // Passo 2: Marca APENAS o contato escolhido como público
+    const [updated] = await Contato.update(
+      { publico: true },
+      { where: { id, usuario_id: usuarioId }, transaction: t }
+    );
+
+    if (!updated) {
+      await t.rollback();
+      return res.status(404).json({ mensagem: "Contato não encontrado." });
+    }
+
+    await t.commit(); // Confirma as duas operações
+    return res.status(200).json({ mensagem: "Contato definido como público com sucesso." });
+
+  } catch (erro) {
+    await t.rollback();
+    console.error("Erro ao definir contato como público:", erro);
     return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
   }
 };

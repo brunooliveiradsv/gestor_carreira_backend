@@ -233,3 +233,39 @@ exports.atualizarSenha = async (req, res, conexao) => {
     return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
   }
 };
+
+exports.atualizarPerfilPublico = async (req, res, conexao) => {
+  const { Usuario } = conexao.models;
+  const usuarioId = req.usuario.id;
+  const { biografia, url_unica, links_redes } = req.body;
+
+  try {
+    // Verifica se a URL única já está em uso por outro usuário
+    if (url_unica) {
+      const urlExistente = await Usuario.findOne({
+        where: {
+          url_unica,
+          id: { [conexao.Sequelize.Op.ne]: usuarioId }
+        }
+      });
+      if (urlExistente) {
+        return res.status(400).json({ mensagem: "Esta URL já está em uso. Por favor, escolha outra." });
+      }
+    }
+
+    const [updated] = await Usuario.update({ biografia, url_unica, links_redes}, {
+      where: { id: usuarioId }
+    });
+
+    if (updated) {
+      const usuarioAtualizado = await Usuario.findByPk(usuarioId, { attributes: { exclude: ['senha'] } });
+      const perfil = usuarioAtualizado.get({ plain: true });
+      return res.status(200).json(perfil);
+    }
+    
+    return res.status(404).json({ mensagem: "Usuário não encontrado." });
+  } catch (error) {
+    console.error("Erro ao atualizar perfil público:", error);
+    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
+  }
+};

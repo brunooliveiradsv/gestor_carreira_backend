@@ -1,8 +1,9 @@
 // src/controladores/sugestao.controlador.js
+const { Musica } = require('../modelos/musica.modelo');
 
 exports.criarSugestao = async (req, res, conexao) => {
-    const { SugestaoMusica } = conexao.models;
-    const { musica_id } = req.params;
+    const { SugestaoMusica, Musica } = conexao.models;
+    const { musica_id } = req.params; // ID da música do *usuário* que está na tela
     const { campo_sugerido, valor_sugerido } = req.body;
     const usuarioId = req.usuario.id;
 
@@ -11,8 +12,20 @@ exports.criarSugestao = async (req, res, conexao) => {
     }
 
     try {
+        // Verifica se a música que o usuário está tentando alterar é uma cópia de uma mestre
+        const musicaDoUsuario = await Musica.findOne({ where: { id: musica_id, usuario_id: usuarioId } });
+        
+        if (!musicaDoUsuario) {
+            return res.status(404).json({ mensagem: "Música não encontrada no seu repertório." });
+        }
+
+        if (!musicaDoUsuario.master_id) {
+            return res.status(403).json({ mensagem: "Você só pode sugerir alterações para músicas importadas do banco de dados." });
+        }
+
+        // Cria a sugestão apontando para a música MESTRE original
         const novaSugestao = await SugestaoMusica.create({
-            musica_id: parseInt(musica_id, 10), // Garante que o ID é um número
+            musica_id: musicaDoUsuario.master_id, 
             usuario_id: usuarioId,
             campo_sugerido,
             valor_sugerido,
@@ -63,35 +76,13 @@ exports.aprovarSugestao = async (req, res, conexao) => {
         }
 
         const dadosParaAtualizar = {};
-        const campo = sugestao.campo_sugerido;
-        let valor = sugestao.valor_sugerido;
+        dadosParaAtualizar[sugestao.campo_sugerido] = sugestao.valor_sugerido;
 
-        // Converte para número se o campo for numérico para evitar erros de tipo
-        if (campo === 'bpm' || campo === 'duracao_segundos') {
-            const valorNumerico = parseInt(valor, 10);
-            // Só atualiza se for um número válido
-            if (!isNaN(valorNumerico)) {
-                valor = valorNumerico;
-            } else {
-                // Se o valor não for um número válido, não o incluímos na atualização
-                console.warn(`Valor inválido para o campo numérico '${campo}': ${valor}`);
-                valor = undefined; // Ignora este campo na atualização
-            }
-        }
-        
-        // Apenas adiciona ao objeto de atualização se o valor for válido
-        if (valor !== undefined) {
-             dadosParaAtualizar[campo] = valor;
-        }
-
-        // Garante que só atualizamos se houver algo para atualizar
-        if (Object.keys(dadosParaAtualizar).length > 0) {
-            // PASSO 1: Atualiza a música principal com os dados da sugestão
-            await Musica.update(
-                dadosParaAtualizar,
-                { where: { id: sugestao.musica_id }, transaction: t }
-            );
-        }
+        // PASSO 1: Atualiza a música MESTRE com os dados da sugestão
+        await Musica.update(
+            dadosParaAtualizar,
+            { where: { id: sugestao.musica_id }, transaction: t }
+        );
 
         // PASSO 2: Atualiza o status da sugestão
         await sugestao.update({ status: 'aprovada' }, { transaction: t });

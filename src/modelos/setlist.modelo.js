@@ -5,11 +5,12 @@ class Setlist extends Model {
   static init(sequelize) {
     super.init({
       nome: DataTypes.STRING,
-      link_cifraclub: DataTypes.STRING, // Manteremos estes campos por agora
+      link_cifraclub: DataTypes.STRING,
       notas_adicionais: DataTypes.TEXT,
+      publico: DataTypes.BOOLEAN, // <-- NOVO
     }, {
       sequelize,
-      tableName: 'setlists' // Nome da nova tabela
+      tableName: 'setlists'
     })
   }
 

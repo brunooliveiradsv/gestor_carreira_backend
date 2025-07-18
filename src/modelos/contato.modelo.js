@@ -4,12 +4,12 @@ const { Model, DataTypes } = require('sequelize');
 
 class Contato extends Model {
   static init(sequelize) {
-    // Define as colunas que o nosso código vai gerenciar
     super.init({
       nome: DataTypes.STRING,
       telefone: DataTypes.STRING,
       email: DataTypes.STRING,
       funcao: DataTypes.STRING,
+      publico: DataTypes.BOOLEAN, // <-- NOVO
     }, {
       sequelize,
       tableName: 'contatos'

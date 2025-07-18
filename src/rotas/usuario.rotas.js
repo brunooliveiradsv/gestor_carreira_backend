@@ -46,5 +46,7 @@ module.exports = (conexao) => {
     });
   });
 
+  roteador.put('/perfil/publico', (req, res) => usuarioControlador.atualizarPerfilPublico(req, res, conexao));
+
   return roteador;
 };
