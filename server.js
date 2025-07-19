@@ -15,7 +15,11 @@ if (!fs.existsSync(diretorioDeUploads)) {
 }
 
 const corsOptions = {
- origin: ['https://voxgest.vercel.app', 'http://localhost:5173'],
+ origin: [
+    'https://voxgest.vercel.app', // O seu URL de produção
+    'https://voxgest-13basv8lo-bruno-oliveiras-projects-66e2895a.vercel.app', // O URL específico do seu último deploy
+    'http://localhost:5173' // O seu ambiente de desenvolvimento local
+],
   optionsSuccessStatus: 200
 };
 
