@@ -252,7 +252,7 @@ exports.atualizarFoto = async (req, res, conexao) => {
     return res.status(400).json({ mensagem: 'Nenhum ficheiro de imagem foi enviado.' });
   }
 
-  // --- ALTERAÇÃO PRINCIPAL ---
+  // --- AQUI ESTÁ A LÓGICA CORRETA ---
   // O Cloudinary devolve o URL completo e seguro no atributo 'path'
   const fotoUrl = req.file.path; 
 

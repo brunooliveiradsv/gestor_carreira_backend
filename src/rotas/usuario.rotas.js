@@ -23,8 +23,7 @@ module.exports = (conexao) => {
   roteador.put('/perfil/senha', (req, res) => usuarioControlador.atualizarSenha(req, res, conexao));
   
   // --- ROTA DE FOTO ATUALIZADA COM TRATAMENTO DE ERRO ---
-  roteador.put('/perfil/foto', upload.single('foto'), (req, res) => {
-      // O tratamento de erro do multer pode ser simplificado ou mantido aqui
+   roteador.put('/perfil/foto', upload.single('foto'), (req, res) => {
       if (!req.file) {
           return res.status(400).json({ mensagem: 'Nenhum ficheiro enviado ou tipo de ficheiro inválido.' });
       }

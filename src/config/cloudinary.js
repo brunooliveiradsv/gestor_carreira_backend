@@ -3,14 +3,12 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 
-// Configura o Cloudinary com as suas credenciais, que virão das variáveis de ambiente
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Configura o armazenamento, definindo a pasta e os formatos permitidos
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
@@ -31,5 +29,5 @@ const fileFilter = (req, file, cb) => {
 module.exports = multer({ 
     storage: storage,
     fileFilter: fileFilter,
-    limits: { fileSize: 5 * 1024 * 1024 } // Limite de 5MB
+    limits: { fileSize: 5 * 1024 * 1024 }
 });
