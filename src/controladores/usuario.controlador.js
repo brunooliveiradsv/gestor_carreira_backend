@@ -249,10 +249,12 @@ exports.atualizarFoto = async (req, res, conexao) => {
   const usuarioId = req.usuario.id;
 
   if (!req.file) {
-    return res.status(400).json({ mensagem: 'Nenhum arquivo de imagem foi enviado.' });
+    return res.status(400).json({ mensagem: 'Nenhum ficheiro de imagem foi enviado.' });
   }
 
-  const fotoUrl = `/uploads/${req.file.filename}`;
+  // --- ALTERAÇÃO PRINCIPAL ---
+  // O Cloudinary devolve o URL completo e seguro no atributo 'path'
+  const fotoUrl = req.file.path; 
 
   try {
     const [updated] = await Usuario.update({ foto_url: fotoUrl }, {
@@ -266,7 +268,7 @@ exports.atualizarFoto = async (req, res, conexao) => {
       return res.status(200).json(perfil);
     }
     
-    return res.status(404).json({ mensagem: "Usuário não encontrado." });
+    return res.status(404).json({ mensagem: "Utilizador não encontrado." });
   } catch (error) {
     console.error("Erro ao atualizar a foto de perfil:", error);
     return res.status(500).json({ mensagem: "Ocorreu um erro no servidor ao salvar a foto." });
