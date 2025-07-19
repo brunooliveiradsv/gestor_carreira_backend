@@ -2,36 +2,41 @@
 const { Op } = require("sequelize");
 
 exports.obterVitrine = async (req, res, conexao) => {
-    const { Usuario, Compromisso, Contato, Setlist, Musica, UsuarioConquista } = conexao.models;
+    // Adiciona o modelo Post à desestruturação
+    const { Usuario, Compromisso, Contato, Setlist, Musica, UsuarioConquista, Post } = conexao.models;
     const { url_unica } = req.params;
 
     try {
+        // 1. Encontrar o artista pela URL única, incluindo os novos campos
         const artista = await Usuario.findOne({
             where: { url_unica },
-            attributes: ['id', 'nome', 'foto_url', 'biografia', 'aplausos', 'links_redes'],
+            attributes: ['id', 'nome', 'foto_url', 'biografia', 'aplausos', 'links_redes']
         });
 
         if (!artista) {
             return res.status(404).json({ mensagem: "Página do artista não encontrada." });
         }
         
+        // 2. Buscar os próximos shows públicos
         const proximosShows = await Compromisso.findAll({
             where: {
                 usuario_id: artista.id,
                 tipo: 'Show',
                 status: 'Agendado',
-                data: { [Op.gte]: new Date() }
+                data: { [Op.gte]: new Date() } // Apenas datas futuras
             },
             attributes: ['nome_evento', 'data', 'local'],
             order: [['data', 'ASC']],
             limit: 5
         });
 
+        // 3. Buscar o contato público (se houver)
         const contatoPublico = await Contato.findOne({
             where: { usuario_id: artista.id, publico: true },
             attributes: ['nome', 'telefone', 'email', 'funcao']
         });
         
+        // 4. Buscar o setlist público com as músicas
         const setlistPublico = await Setlist.findOne({
             where: { usuario_id: artista.id, publico: true },
             attributes: ['nome', 'notas_adicionais'],
@@ -39,13 +44,11 @@ exports.obterVitrine = async (req, res, conexao) => {
                 model: Musica,
                 as: 'musicas',
                 attributes: ['nome', 'artista'],
-                through: { attributes: [] }
+                through: { attributes: [] } // Não incluir dados da tabela de junção
             }]
         });
 
-        // --- NOVAS INFORMAÇÕES ADICIONADAS ---
-
-        // 1. Buscar as músicas mais populares (com maior contagem de "popularidade")
+        // 5. Buscar as músicas mais populares
         const musicasPopulares = await Musica.findAll({
             where: { usuario_id: artista.id },
             order: [['popularidade', 'DESC']],
@@ -53,7 +56,7 @@ exports.obterVitrine = async (req, res, conexao) => {
             attributes: ['nome', 'artista', 'popularidade']
         });
 
-        // 2. Buscar estatísticas da carreira
+        // 6. Buscar estatísticas da carreira
         const totalShowsRealizados = await Compromisso.count({
             where: { usuario_id: artista.id, tipo: 'Show', status: 'Realizado' }
         });
@@ -70,15 +73,22 @@ exports.obterVitrine = async (req, res, conexao) => {
             conquistas: totalConquistas
         };
 
-        // --- FIM DAS NOVAS INFORMAÇÕES ---
+        // 7. Buscar os 5 posts mais recentes do artista
+        const postsRecentes = await Post.findAll({
+            where: { user_id: artista.id },
+            order: [['created_at', 'DESC']],
+            limit: 5
+        });
 
+        // 8. Montar o objeto de resposta final
         const vitrine = {
             artista: artista.toJSON(),
             proximosShows,
             contatoPublico,
             setlistPublico,
-            musicasPopulares, // <-- Novo
-            estatisticas,     // <-- Novo
+            musicasPopulares,
+            estatisticas,
+            postsRecentes, // Adiciona os posts à resposta
         };
 
         return res.status(200).json(vitrine);
@@ -100,9 +110,10 @@ exports.registrarAplauso = async (req, res, conexao) => {
         }
 
         // Incrementa o contador de aplausos em 1
-        await artista.increment('aplausos', { by: 1 });
+        const novoTotal = await artista.increment('aplausos', { by: 1 });
 
-        return res.status(200).json({ aplausos: artista.aplausos + 1 });
+        // Retorna o novo total de aplausos
+        return res.status(200).json({ aplausos: novoTotal.aplausos });
         
     } catch (erro) {
         console.error("Erro ao registrar aplauso:", erro);

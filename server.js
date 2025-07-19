@@ -38,6 +38,8 @@ const musicaRotas = require("./src/rotas/musica.rotas.js");
 const tagRotas = require("./src/rotas/tag.rotas.js");
 const vitrineRotas = require("./src/rotas/vitrine.rotas.js");
 const musicaMestreRotas = require("./src/rotas/musica_mestre.rotas.js");
+const logRotas = require("./src/rotas/log.rotas.js");
+const postRotas = require("./src/rotas/post.rotas.js"); 
 
 // Registro de todas as rotas da API
 app.use("/api/usuarios", usuarioRotas(conexao));
@@ -53,6 +55,8 @@ app.use("/api/musicas", musicaRotas(conexao)); // Agora inclui a rota de sugest√
 app.use("/api/tags", tagRotas(conexao));
 app.use("/api/vitrine", vitrineRotas(conexao));
 app.use("/api/admin/musicas", musicaMestreRotas(conexao));
+app.use("/api/admin/logs", logRotas(conexao)); //
+app.use("/api/posts", postRotas(conexao)); // Rota para posts
 
 const PORTA = process.env.PORT || 3000;
 

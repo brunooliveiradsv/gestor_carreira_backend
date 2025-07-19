@@ -1,37 +1,52 @@
 // src/controladores/usuario.controlador.js
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto'); // Módulo nativo do Node.js para criptografia
-const emailServico = require('../servicos/email.servico'); // Nosso novo serviço de e-mail
+const crypto = require('crypto');
+const emailServico = require('../servicos/email.servico');
+const logService = require('../servicos/log.servico'); // Importa o serviço de log
 
 
-exports.atualizarFoto = async (req, res, conexao) => {
+// --- FUNÇÃO ATUALIZADA ---
+exports.atualizarPerfilPublico = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
-
-  if (!req.file) {
-    return res.status(400).json({ mensagem: 'Nenhum arquivo de imagem foi enviado.' });
-  }
-
-  // O caminho do arquivo salvo pelo multer. 
-  // Em um ambiente de produção real, você salvaria em um bucket (S3, GCS) 
-  // e obteria a URL pública. Para este exemplo, usamos o caminho local.
-  const fotoUrl = `/uploads/${req.file.filename}`;
+  const { biografia, url_unica, links_redes } = req.body;
 
   try {
-    const [updated] = await Usuario.update({ foto_url: fotoUrl }, {
+    // Verifica se a URL única já está em uso por outro usuário
+    if (url_unica) {
+      const urlExistente = await Usuario.findOne({
+        where: {
+          url_unica,
+          id: { [conexao.Sequelize.Op.ne]: usuarioId }
+        }
+      });
+      if (urlExistente) {
+        return res.status(400).json({ mensagem: "Esta URL já está em uso. Por favor, escolha outra." });
+      }
+    }
+
+    // Cria o objeto de atualização apenas com os campos que foram enviados
+    const dadosParaAtualizar = {};
+    if (biografia !== undefined) dadosParaAtualizar.biografia = biografia;
+    if (url_unica !== undefined) dadosParaAtualizar.url_unica = url_unica;
+    if (links_redes !== undefined) dadosParaAtualizar.links_redes = links_redes;
+
+    const [updated] = await Usuario.update(dadosParaAtualizar, {
       where: { id: usuarioId }
     });
 
     if (updated) {
       const usuarioAtualizado = await Usuario.findByPk(usuarioId, { attributes: { exclude: ['senha'] } });
-      return res.status(200).json(usuarioAtualizado);
+      const perfil = usuarioAtualizado.get({ plain: true });
+      logService.registrarAcao(conexao, usuarioId, 'UPDATE_PUBLIC_PROFILE', { changes: Object.keys(dadosParaAtualizar) });
+      return res.status(200).json(perfil);
     }
     
     return res.status(404).json({ mensagem: "Usuário não encontrado." });
   } catch (error) {
-    console.error("Erro ao atualizar a foto de perfil:", error);
-    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor ao salvar a foto." });
+    console.error("Erro ao atualizar perfil público:", error);
+    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
   }
 };
 
@@ -39,12 +54,10 @@ exports.registrar = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const { nome, email, senha } = req.body;
 
-  // Validação dos campos básicos
   if (!nome || !email || !senha) {
     return res.status(400).json({ mensagem: 'Todos os campos são obrigatórios!' });
   }
 
-  // --- NOVA VALIDAÇÃO DE TAMANHO DA SENHA ---
   if (senha.length < 8) {
     return res.status(400).json({ mensagem: "A senha deve ter no mínimo 8 caracteres." });
   }
@@ -61,8 +74,11 @@ exports.registrar = async (req, res, conexao) => {
     });
 
     const token = jwt.sign({ id: novoUsuario.id }, 'nosso_segredo_super_secreto', { expiresIn: '8h' });
-    const usuarioParaResposta = { id: novoUsuario.id, nome: novoUsuario.nome, email: novoUsuario.email };
+    const { senha: _, ...usuarioParaResposta } = novoUsuario.get({ plain: true });
     
+    // Regista a ação de novo registo
+    logService.registrarAcao(conexao, novoUsuario.id, 'USER_REGISTER');
+
     res.status(201).json({ 
       mensagem: 'Usuário registrado com sucesso!',
       usuario: usuarioParaResposta,
@@ -90,22 +106,25 @@ exports.login = async (req, res, conexao) => {
 
     const senhaCorreta = bcrypt.compareSync(senha, usuario.senha);
     if (!senhaCorreta) {
+      // Pode ser útil registar tentativas de login falhadas no futuro
       return res.status(401).json({ mensagem: 'Senha inválida.' });
     }
 
     const token = jwt.sign(
       { id: usuario.id },
-      'nosso_segredo_super_secreto', // Use uma variável de ambiente para isso em produção!
+      'nosso_segredo_super_secreto',
       { expiresIn: '8h' }
     );
 
-    // Retorna os dados do usuário (sem a senha) junto com o token
-    const usuarioParaResposta = { id: usuario.id, nome: usuario.nome, email: usuario.email, role: usuario.role };
+    const { senha: _, ...usuarioParaResposta } = usuario.get({ plain: true });
+    
+    // Regista a ação de login bem-sucedido
+    logService.registrarAcao(conexao, usuario.id, 'USER_LOGIN');
 
     res.status(200).json({
       mensagem: 'Login bem-sucedido!',
       token: token,
-      usuario: usuarioParaResposta // Adicionado para o frontend ter os dados do usuário
+      usuario: usuarioParaResposta
     });
 
   } catch (erro) {
@@ -114,7 +133,6 @@ exports.login = async (req, res, conexao) => {
   }
 };
 
-// --- FUNÇÃO NOVA: RECUPERAR SENHA ---
 exports.recuperarSenha = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const { email } = req.body;
@@ -126,27 +144,23 @@ exports.recuperarSenha = async (req, res, conexao) => {
   try {
     const usuario = await Usuario.findOne({ where: { email } });
 
-    // Mesmo que o usuário não exista, retornamos uma mensagem de sucesso
-    // para não dar pistas a possíveis atacantes se um e-mail está cadastrado ou não.
     if (!usuario) {
-      return res.status(200).json({ mensagem: 'Se um usuário com este e-mail existir, um link de recuperação foi enviado.' });
+      return res.status(200).json({ mensagem: 'Se um usuário com este e-mail existir, um e-mail de recuperação foi enviado.' });
     }
 
-    // Gera uma nova senha aleatória de 8 caracteres
     const novaSenha = crypto.randomBytes(4).toString('hex');
     const senhaCriptografada = bcrypt.hashSync(novaSenha, 10);
 
-    // Atualiza o usuário com a nova senha
     await usuario.update({ senha: senhaCriptografada });
 
-    // Envia o e-mail para o usuário
     const emailEnviado = await emailServico.enviarEmailDeRecuperacao(email, novaSenha);
 
     if (!emailEnviado) {
-      // Se o e-mail falhar, não devemos travar o processo para o usuário.
-      // A senha foi alterada, mas o ideal é logar o erro para a administração verificar.
       console.error(`A senha do usuário ${email} foi redefinida, mas o e-mail de notificação falhou.`);
     }
+    
+    // Regista a ação de recuperação de senha
+    logService.registrarAcao(conexao, usuario.id, 'PASSWORD_RECOVERY');
 
     return res.status(200).json({ mensagem: 'Se um usuário com este e-mail existir, um e-mail de recuperação foi enviado.' });
 
@@ -158,13 +172,10 @@ exports.recuperarSenha = async (req, res, conexao) => {
 
 
 exports.buscarPerfil = async (req, res, conexao) => {
-  // req.usuario é definido pelo authMiddleware e contém o objeto do usuário autenticado
-  // Garante que a senha não seja enviada na resposta
   const { senha, ...perfil } = req.usuario.get({ plain: true });
   return res.status(200).json(perfil);
 };
 
-// --- FUNÇÃO NOVA: ATUALIZAR E-MAIL ---
 exports.atualizarEmail = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
@@ -175,7 +186,6 @@ exports.atualizarEmail = async (req, res, conexao) => {
   }
 
   try {
-    // Verifica se o novo e-mail já está em uso por outro usuário
     const emailExistente = await Usuario.findOne({ where: { email, id: { [conexao.Sequelize.Op.ne]: usuarioId } } });
     if (emailExistente) {
       return res.status(400).json({ mensagem: "Este e-mail já está sendo utilizado por outra conta." });
@@ -186,6 +196,7 @@ exports.atualizarEmail = async (req, res, conexao) => {
     if (updated) {
       const usuarioAtualizado = await Usuario.findByPk(usuarioId);
       const { senha, ...perfil } = usuarioAtualizado.get({ plain: true });
+      logService.registrarAcao(conexao, usuarioId, 'UPDATE_PROFILE_EMAIL', { new_email: email });
       return res.status(200).json(perfil);
     }
     return res.status(404).json({ mensagem: "Usuário não encontrado." });
@@ -196,7 +207,6 @@ exports.atualizarEmail = async (req, res, conexao) => {
   }
 };
 
-// --- FUNÇÃO NOVA: ATUALIZAR SENHA ---
 exports.atualizarSenha = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
@@ -216,15 +226,15 @@ exports.atualizarSenha = async (req, res, conexao) => {
       return res.status(404).json({ mensagem: "Usuário não encontrado." });
     }
 
-    // Compara a senha atual enviada com a que está no banco
     const senhaCorreta = bcrypt.compareSync(senhaAtual, usuario.senha);
     if (!senhaCorreta) {
       return res.status(401).json({ mensagem: "A senha atual está incorreta." });
     }
 
-    // Criptografa e salva a nova senha
     const senhaCriptografada = bcrypt.hashSync(novaSenha, 10);
     await usuario.update({ senha: senhaCriptografada });
+    
+    logService.registrarAcao(conexao, usuarioId, 'UPDATE_PASSWORD');
 
     return res.status(200).json({ mensagem: "Senha atualizada com sucesso!" });
 
@@ -234,38 +244,31 @@ exports.atualizarSenha = async (req, res, conexao) => {
   }
 };
 
-exports.atualizarPerfilPublico = async (req, res, conexao) => {
+exports.atualizarFoto = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
-  const { biografia, url_unica, links_redes } = req.body;
+
+  if (!req.file) {
+    return res.status(400).json({ mensagem: 'Nenhum arquivo de imagem foi enviado.' });
+  }
+
+  const fotoUrl = `/uploads/${req.file.filename}`;
 
   try {
-    // Verifica se a URL única já está em uso por outro usuário
-    if (url_unica) {
-      const urlExistente = await Usuario.findOne({
-        where: {
-          url_unica,
-          id: { [conexao.Sequelize.Op.ne]: usuarioId }
-        }
-      });
-      if (urlExistente) {
-        return res.status(400).json({ mensagem: "Esta URL já está em uso. Por favor, escolha outra." });
-      }
-    }
-
-    const [updated] = await Usuario.update({ biografia, url_unica, links_redes}, {
+    const [updated] = await Usuario.update({ foto_url: fotoUrl }, {
       where: { id: usuarioId }
     });
 
     if (updated) {
       const usuarioAtualizado = await Usuario.findByPk(usuarioId, { attributes: { exclude: ['senha'] } });
       const perfil = usuarioAtualizado.get({ plain: true });
+      logService.registrarAcao(conexao, usuarioId, 'UPDATE_PROFILE_PICTURE', { new_url: fotoUrl });
       return res.status(200).json(perfil);
     }
     
     return res.status(404).json({ mensagem: "Usuário não encontrado." });
   } catch (error) {
-    console.error("Erro ao atualizar perfil público:", error);
-    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
+    console.error("Erro ao atualizar a foto de perfil:", error);
+    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor ao salvar a foto." });
   }
 };

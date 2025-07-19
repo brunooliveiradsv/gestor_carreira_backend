@@ -1,6 +1,7 @@
 // src/controladores/setlist.controlador.js
 const { Op } = require('sequelize');
 const conquistaServico = require('../servicos/conquista.servico');
+const logService = require('../servicos/log.servico'); // Importa o serviço de log
 
 // --- FUNÇÕES DO DASHBOARD ---
 
@@ -15,7 +16,7 @@ exports.estatisticas = async (req, res, conexao) => {
     const proximoShow = await Compromisso.findOne({
       where: {
         usuario_id: usuarioId,
-        data: { [Op.gte]: new Date() }, // Data maior ou igual a hoje
+        data: { [Op.gte]: new Date() },
         status: 'Agendado'
       },
       order: [['data', 'ASC']],
@@ -47,6 +48,9 @@ exports.criar = async (req, res, conexao) => {
 
   try {
     const novoSetlist = await Setlist.create({ nome, usuario_id: usuarioId });
+    
+    // Regista a ação no log
+    logService.registrarAcao(conexao, usuarioId, 'CREATE_SETLIST', { setlistId: novoSetlist.id, setlistName: novoSetlist.nome });
     
     conquistaServico.verificarEConcederConquistas(usuarioId, 'CONTAGEM_REPERTORIOS', conexao);
     conquistaServico.verificarEConcederConquistas(usuarioId, 'PRIMEIRO_REPERTORIO_CRIADO', conexao);
@@ -82,7 +86,7 @@ exports.buscarPorId = async (req, res, conexao) => {
       include: [{
         model: Musica,
         as: 'musicas',
-        through: { attributes: ['ordem'] } // Inclui o campo 'ordem' da tabela de ligação
+        through: { attributes: ['ordem'] }
       }]
     });
 
@@ -90,7 +94,6 @@ exports.buscarPorId = async (req, res, conexao) => {
       return res.status(404).json({ mensagem: "Setlist não encontrado." });
     }
 
-    // Ordena as músicas com base no campo 'ordem'
     setlist.musicas.sort((a, b) => a.setlist_musicas.ordem - b.setlist_musicas.ordem);
 
     return res.status(200).json(setlist);
@@ -110,6 +113,7 @@ exports.atualizar = async (req, res, conexao) => {
     const [updated] = await Setlist.update({ nome, notas_adicionais }, { where: { id, usuario_id: usuarioId } });
     if (updated) {
       const setlistAtualizado = await Setlist.findByPk(id);
+      logService.registrarAcao(conexao, usuarioId, 'UPDATE_SETLIST_DETAILS', { setlistId: id });
       return res.status(200).json(setlistAtualizado);
     }
     return res.status(404).json({ mensagem: "Setlist não encontrado." });
@@ -125,6 +129,8 @@ exports.apagar = async (req, res, conexao) => {
   try {
     const deletado = await Setlist.destroy({ where: { id, usuario_id: usuarioId } });
     if (deletado) {
+      // Regista a ação no log
+      logService.registrarAcao(conexao, usuarioId, 'DELETE_SETLIST', { setlistId: id });
       return res.status(204).send();
     }
     return res.status(404).json({ mensagem: "Setlist não encontrado." });
@@ -133,11 +139,10 @@ exports.apagar = async (req, res, conexao) => {
   }
 };
 
-// --- LÓGICA INTELIGENTE ---
+// --- LÓGICA DE MANIPULAÇÃO DE MÚSICAS ---
 
 exports.atualizarMusicas = async (req, res, conexao) => {
-  // A linha abaixo não muda, mas serve de referência
-  const { Setlist } = conexao.models;
+  const { Setlist, SetlistMusica } = conexao.models;
   const { id } = req.params;
   const { musicasIds } = req.body;
   const usuarioId = req.usuario.id;
@@ -156,14 +161,13 @@ exports.atualizarMusicas = async (req, res, conexao) => {
       ordem: index
     }));
 
-    // --- LINHAS CORRIGIDAS ---
-    // Corrigimos de 'setlist_musicas' para 'SetlistMusica' (o nome da classe do modelo)
-    await conexao.models.SetlistMusica.destroy({ where: { setlist_id: setlist.id }, transaction: t });
+    await SetlistMusica.destroy({ where: { setlist_id: setlist.id }, transaction: t });
     if (musicasParaAssociar.length > 0) {
-      await conexao.models.SetlistMusica.bulkCreate(musicasParaAssociar, { transaction: t });
+      await SetlistMusica.bulkCreate(musicasParaAssociar, { transaction: t });
     }
     
     await t.commit();
+    logService.registrarAcao(conexao, usuarioId, 'UPDATE_SETLIST_MUSICS', { setlistId: id, musicCount: musicasIds.length });
     return res.status(200).json({ mensagem: "Setlist atualizado com sucesso." });
 
   } catch (erro) {
@@ -175,8 +179,8 @@ exports.atualizarMusicas = async (req, res, conexao) => {
 
 exports.sugerirMusicas = async (req, res, conexao) => {
   const { Setlist, Musica, Tag } = conexao.models;
-  const { id } = req.params; // ID do setlist
-  const { quantidade = 5 } = req.body; // Quantidade de sugestões desejadas
+  const { id } = req.params;
+  const { quantidade = 5 } = req.body;
   const usuarioId = req.usuario.id;
 
   try {
@@ -186,10 +190,9 @@ exports.sugerirMusicas = async (req, res, conexao) => {
     });
 
     if (!setlistAtual || setlistAtual.musicas.length === 0) {
-      return res.status(400).json({ mensagem: "Setlist vazio ou não encontrado. Adicione músicas para obter sugestões." });
+      return res.status(400).json({ mensagem: "Adicione músicas para obter sugestões." });
     }
 
-    // Pega os IDs de todas as tags presentes no setlist e os IDs das músicas que já estão nele
     const idsDasTagsNoSetlist = [...new Set(setlistAtual.musicas.flatMap(m => m.tags.map(t => t.id)))];
     const idsDasMusicasNoSetlist = setlistAtual.musicas.map(m => m.id);
 
@@ -197,22 +200,18 @@ exports.sugerirMusicas = async (req, res, conexao) => {
       return res.status(400).json({ mensagem: "Nenhuma música no setlist possui tags para basear a sugestão." });
     }
 
-    // Busca músicas que:
-    // 1. Pertencem ao usuário
-    // 2. NÃO estão no setlist atual
-    // 3. Possuem PELO MENOS UMA das tags encontradas
     const sugestoes = await Musica.findAll({
       where: {
         usuario_id: usuarioId,
-        id: { [Op.notIn]: idsDasMusicasNoSetlist } // Exclui músicas que já estão na lista
+        id: { [Op.notIn]: idsDasMusicasNoSetlist }
       },
       include: [{
         model: Tag,
         as: 'tags',
-        where: { id: { [Op.in]: idsDasTagsNoSetlist } }, // Filtra por tags relevantes
+        where: { id: { [Op.in]: idsDasTagsNoSetlist } },
         attributes: []
       }],
-      order: [['popularidade', 'DESC'], ['ultima_vez_tocada', 'ASC']], // Prioriza populares e menos tocadas recentemente
+      order: [['popularidade', 'DESC'], ['ultima_vez_tocada', 'ASC']],
       limit: quantidade
     });
 

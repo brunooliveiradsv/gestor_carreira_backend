@@ -11,8 +11,8 @@ class Usuario extends Model {
       foto_url: DataTypes.STRING,
       biografia: DataTypes.TEXT,
       url_unica: DataTypes.STRING,
-      aplausos: DataTypes.INTEGER, // <-- NOVO
-       links_redes: DataTypes.JSONB,
+      aplausos: DataTypes.INTEGER,
+      links_redes: DataTypes.JSONB,
     }, { sequelize, tableName: 'usuarios' })
   }
   
@@ -26,6 +26,8 @@ class Usuario extends Model {
     this.hasMany(models.Equipamento, { foreignKey: 'usuario_id', as: 'equipamentos' });
     this.belongsToMany(models.Conquista, { through: models.UsuarioConquista, foreignKey: 'usuario_id', as: 'conquistas' });
     this.hasMany(models.SugestaoMusica, { foreignKey: 'usuario_id', as: 'sugestoes_feitas' });
+    this.hasMany(models.ActivityLog, { foreignKey: 'user_id', as: 'activity_logs' });
+    this.hasMany(models.Post, { foreignKey: 'user_id', as: 'posts' });
   }
 }
 
