@@ -120,3 +120,33 @@ exports.registrarAplauso = async (req, res, conexao) => {
         return res.status(500).json({ mensagem: "Não foi possível registrar o aplauso." });
     }
 };
+
+exports.registrarReacaoPost = async (req, res, conexao) => {
+    const { Post } = conexao.models;
+    const { id } = req.params; // ID do post
+    const { tipo } = req.body; // 'like' ou 'dislike'
+
+    if (tipo !== 'like' && tipo !== 'dislike') {
+        return res.status(400).json({ mensagem: "Tipo de reação inválido." });
+    }
+
+    try {
+        const post = await Post.findByPk(id);
+        if (!post) {
+            return res.status(404).json({ mensagem: "Publicação não encontrada." });
+        }
+
+        // Incrementa o contador correspondente
+        if (tipo === 'like') {
+            await post.increment('likes', { by: 1 });
+        } else {
+            await post.increment('dislikes', { by: 1 });
+        }
+
+        return res.status(200).json({ mensagem: "Reação registrada." });
+        
+    } catch (erro) {
+        console.error("Erro ao registrar reação no post:", erro);
+        return res.status(500).json({ mensagem: "Não foi possível registrar a reação." });
+    }
+};

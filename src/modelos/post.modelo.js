@@ -6,9 +6,14 @@ class Post extends Model {
     super.init({
       content: DataTypes.TEXT,
       link: DataTypes.STRING,
+      likes: DataTypes.INTEGER,     // <-- NOVO
+      dislikes: DataTypes.INTEGER,  // <-- NOVO
+      createdAt: { type: DataTypes.DATE, field: 'created_at' },
+      updatedAt: { type: DataTypes.DATE, field: 'updated_at' }
     }, {
       sequelize,
       tableName: 'posts',
+      timestamps: true,
     })
   }
 
