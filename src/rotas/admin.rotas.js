@@ -19,6 +19,8 @@ module.exports = (conexao) => {
   roteador.post('/usuarios', (req, res) => adminControlador.criarUsuario(req, res, conexao));
   roteador.delete('/usuarios/:id/dados', (req, res) => adminControlador.limparDadosUsuario(req, res, conexao));
 
+roteador.put('/usuarios/:id/assinatura', (req, res) => adminControlador.gerenciarAssinatura(req, res, conexao));
+
   // --- ROTAS DE MODERAÇÃO DE SUGESTÕES ---
   roteador.get('/sugestoes', (req, res) => sugestaoControlador.listarSugestoesPendentes(req, res, conexao));
   roteador.put('/sugestoes/:id/aprovar', (req, res) => sugestaoControlador.aprovarSugestao(req, res, conexao));

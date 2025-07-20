@@ -128,3 +128,46 @@ exports.criarUsuario = async (req, res, conexao) => {
     return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
   }
 };
+
+
+exports.gerenciarAssinatura = async (req, res, conexao) => {
+  const { Usuario } = conexao.models;
+  const { id } = req.params; // ID do usuário a ser modificado
+  const { acao, plano } = req.body; // 'acao' pode ser 'conceder' ou 'remover'
+
+  try {
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) {
+      return res.status(404).json({ mensagem: "Usuário não encontrado." });
+    }
+
+    if (acao === 'conceder') {
+      if (!plano || (plano !== 'padrao' && plano !== 'premium')) {
+        return res.status(400).json({ mensagem: "Um plano válido ('padrao' ou 'premium') é obrigatório para conceder uma assinatura." });
+      }
+      
+      await usuario.update({
+        plano: plano,
+        status_assinatura: 'ativa',
+        teste_termina_em: null, // Remove qualquer período de teste
+      });
+      return res.status(200).json({ mensagem: `Assinatura do plano ${plano} concedida com sucesso!` });
+
+    } else if (acao === 'remover') {
+      
+      await usuario.update({
+        plano: null,
+        status_assinatura: 'inativa', // Ou 'cancelada', dependendo da sua regra de negócio
+        teste_termina_em: null,
+      });
+      return res.status(200).json({ mensagem: "Assinatura do usuário removida com sucesso." });
+
+    } else {
+      return res.status(400).json({ mensagem: "Ação inválida. Use 'conceder' ou 'remover'." });
+    }
+
+  } catch (erro) {
+    console.error("Erro ao gerir assinatura de usuário:", erro);
+    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
+  }
+};
