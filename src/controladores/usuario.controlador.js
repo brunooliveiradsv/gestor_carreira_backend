@@ -5,15 +5,12 @@ const crypto = require('crypto');
 const emailServico = require('../servicos/email.servico');
 const logService = require('../servicos/log.servico'); // Importa o serviço de log
 
-
-// --- FUNÇÃO ATUALIZADA ---
 exports.atualizarPerfilPublico = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
   const { biografia, url_unica, links_redes } = req.body;
 
   try {
-    // Verifica se a URL única já está em uso por outro usuário
     if (url_unica) {
       const urlExistente = await Usuario.findOne({
         where: {
@@ -26,7 +23,6 @@ exports.atualizarPerfilPublico = async (req, res, conexao) => {
       }
     }
 
-    // Cria o objeto de atualização apenas com os campos que foram enviados
     const dadosParaAtualizar = {};
     if (biografia !== undefined) dadosParaAtualizar.biografia = biografia;
     if (url_unica !== undefined) dadosParaAtualizar.url_unica = url_unica;
@@ -68,25 +64,36 @@ exports.registrar = async (req, res, conexao) => {
       return res.status(400).json({ mensagem: 'Este e-mail já está em uso.' });
     }
 
+    // LÓGICA DO TESTE AUTOMÁTICO
+    // 1. Calcula a data de término do teste: hoje + 7 dias
+    const dataTerminoTeste = new Date();
+    dataTerminoTeste.setDate(dataTerminoTeste.getDate() + 7);
+
     const senhaCriptografada = bcrypt.hashSync(senha, 10);
     const novoUsuario = await Usuario.create({
-      nome, email, senha: senhaCriptografada, role: 'usuario'
+      nome, 
+      email, 
+      senha: senhaCriptografada, 
+      role: 'usuario',
+      // 2. Define os campos da assinatura diretamente na criação
+      plano: 'premium',
+      status_assinatura: 'teste',
+      teste_termina_em: dataTerminoTeste
     });
 
     const token = jwt.sign({ id: novoUsuario.id }, 'nosso_segredo_super_secreto', { expiresIn: '8h' });
     const { senha: _, ...usuarioParaResposta } = novoUsuario.get({ plain: true });
     
-    // Regista a ação de novo registo
     logService.registrarAcao(conexao, novoUsuario.id, 'USER_REGISTER');
 
     res.status(201).json({ 
-      mensagem: 'Usuário registrado com sucesso!',
+      mensagem: 'Usuário registado com sucesso!',
       usuario: usuarioParaResposta,
       token: token
     });
 
   } catch (erro) {
-    console.error("Erro no registro:", erro); 
+    console.error("Erro no registo:", erro); 
     res.status(500).json({ mensagem: 'Ocorreu um erro no servidor.' });
   }
 };
@@ -106,7 +113,6 @@ exports.login = async (req, res, conexao) => {
 
     const senhaCorreta = bcrypt.compareSync(senha, usuario.senha);
     if (!senhaCorreta) {
-      // Pode ser útil registar tentativas de login falhadas no futuro
       return res.status(401).json({ mensagem: 'Senha inválida.' });
     }
 
@@ -118,7 +124,6 @@ exports.login = async (req, res, conexao) => {
 
     const { senha: _, ...usuarioParaResposta } = usuario.get({ plain: true });
     
-    // Regista a ação de login bem-sucedido
     logService.registrarAcao(conexao, usuario.id, 'USER_LOGIN');
 
     res.status(200).json({
@@ -159,7 +164,6 @@ exports.recuperarSenha = async (req, res, conexao) => {
       console.error(`A senha do usuário ${email} foi redefinida, mas o e-mail de notificação falhou.`);
     }
     
-    // Regista a ação de recuperação de senha
     logService.registrarAcao(conexao, usuario.id, 'PASSWORD_RECOVERY');
 
     return res.status(200).json({ mensagem: 'Se um usuário com este e-mail existir, um e-mail de recuperação foi enviado.' });
@@ -252,8 +256,6 @@ exports.atualizarFoto = async (req, res, conexao) => {
     return res.status(400).json({ mensagem: 'Nenhum ficheiro de imagem foi enviado.' });
   }
 
-  // --- AQUI ESTÁ A LÓGICA CORRETA ---
-  // O Cloudinary devolve o URL completo e seguro no atributo 'path'
   const fotoUrl = req.file.path; 
 
   try {

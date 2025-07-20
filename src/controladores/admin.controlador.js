@@ -63,7 +63,7 @@ exports.limparDadosUsuario = async (req, res, conexao) => {
     UsuarioConquista,
     Equipamento,
     Musica,
-    Post // <-- ADICIONADO
+    Post
   } = conexao.models;
   const { id } = req.params;
 
@@ -72,7 +72,6 @@ exports.limparDadosUsuario = async (req, res, conexao) => {
   try {
     console.log(`Iniciando limpeza de dados completa para o usuário ID: ${id}`);
 
-    // Apaga os dados de todas as tabelas associadas
     await Compromisso.destroy({ where: { usuario_id: id }, transaction: t });
     await Transacao.destroy({ where: { usuario_id: id }, transaction: t });
     await Contato.destroy({ where: { usuario_id: id }, transaction: t });
@@ -80,9 +79,6 @@ exports.limparDadosUsuario = async (req, res, conexao) => {
     await UsuarioConquista.destroy({ where: { usuario_id: id }, transaction: t });
     await Equipamento.destroy({ where: { usuario_id: id }, transaction: t });
     await Musica.destroy({ where: { usuario_id: id }, transaction: t });
-
-    // --- LINHA CORRIGIDA ---
-    // Agora também apaga todas as publicações do mural do usuário
     await Post.destroy({ where: { user_id: id }, transaction: t });
 
     await t.commit();
@@ -111,12 +107,20 @@ exports.criarUsuario = async (req, res, conexao) => {
     if (usuarioExistente) {
       return res.status(400).json({ mensagem: "Este e-mail já está em uso." });
     }
+
+    // LÓGICA DO TESTE AUTOMÁTICO
+    const dataTerminoTeste = new Date();
+    dataTerminoTeste.setDate(dataTerminoTeste.getDate() + 7);
+
     const senhaCriptografada = bcrypt.hashSync(senha, 10);
     const novoUsuario = await Usuario.create({
       nome,
       email,
       senha: senhaCriptografada,
       role,
+      plano: 'premium',
+      status_assinatura: 'teste',
+      teste_termina_em: dataTerminoTeste
     });
     const { senha: _, ...usuarioSemSenha } = novoUsuario.get({ plain: true });
     return res.status(201).json(usuarioSemSenha);
