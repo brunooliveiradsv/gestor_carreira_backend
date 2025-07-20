@@ -2,6 +2,7 @@
 const express = require('express');
 const setlistControlador = require('../controladores/setlist.controlador');
 const authMiddleware = require('../middlewares/autenticacao');
+const assinaturaMiddleware = require('../middlewares/assinatura');
 
 module.exports = (conexao) => {
   const roteador = express.Router();
@@ -15,7 +16,7 @@ module.exports = (conexao) => {
   roteador.get('/', (req, res) => setlistControlador.listar(req, res, conexao));
   
   // Cria um novo setlist (ainda sem músicas)
-  roteador.post('/', (req, res) => setlistControlador.criar(req, res, conexao));
+  roteador.post('/', assinaturaMiddleware(), (req, res) => setlistControlador.criar(req, res, conexao));
 
   // --- ROTAS ESPECÍFICAS DE UM SETLIST ---
   // Busca um setlist específico, já com as músicas ordenadas
