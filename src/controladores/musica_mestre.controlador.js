@@ -12,19 +12,28 @@ exports.listar = async (req, res, conexao) => {
     }
 };
 
-// Admin: Cria uma nova música mestre com todos os campos
+// Admin: Cria uma nova música mestre
 exports.criar = async (req, res, conexao) => {
     const { Musica } = conexao.models;
-    // Extrai todos os campos possíveis do corpo da requisição
     const { nome, artista, tom, bpm, duracao_minutos, link_cifra, notas_adicionais, is_publica } = req.body;
     
     if (!nome || !artista) {
         return res.status(400).json({ mensagem: "Nome e artista são obrigatórios." });
     }
     try {
+        // --- CORREÇÃO AQUI ---
+        // Converte campos numéricos vazios para null antes de salvar
+        const bpmValue = (bpm === '' || bpm === undefined) ? null : parseInt(bpm, 10);
+
         const novaMusica = await Musica.create({ 
-            nome, artista, tom, bpm, duracao_minutos, link_cifra, notas_adicionais, 
-            is_publica, 
+            nome, 
+            artista, 
+            tom, 
+            bpm: bpmValue, // Usa o valor tratado
+            duracao_minutos, 
+            link_cifra, 
+            notas_adicionais, 
+            is_publica: is_publica !== undefined ? is_publica : false,
             usuario_id: null, 
             master_id: null 
         });
@@ -35,16 +44,17 @@ exports.criar = async (req, res, conexao) => {
     }
 };
 
-// Admin: Atualiza uma música mestre com todos os campos
+// Admin: Atualiza uma música mestre
 exports.atualizar = async (req, res, conexao) => {
     const { Musica } = conexao.models;
     const { id } = req.params;
-    // Pega todos os dados do corpo da requisição para a atualização
     const { nome, artista, tom, bpm, duracao_minutos, link_cifra, notas_adicionais, is_publica } = req.body;
-
     try {
+        // Converte campos numéricos vazios para null também na atualização
+        const bpmValue = (bpm === '' || bpm === undefined) ? null : parseInt(bpm, 10);
+
         const [updated] = await Musica.update({
-            nome, artista, tom, bpm, duracao_minutos, link_cifra, notas_adicionais, is_publica
+            nome, artista, tom, bpm: bpmValue, duracao_minutos, link_cifra, notas_adicionais, is_publica
         }, { where: { id, master_id: null } });
 
         if (updated) {
