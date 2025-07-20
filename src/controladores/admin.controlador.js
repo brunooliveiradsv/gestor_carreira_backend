@@ -62,7 +62,8 @@ exports.limparDadosUsuario = async (req, res, conexao) => {
     Setlist,
     UsuarioConquista,
     Equipamento,
-    Musica // <-- ADICIONADO
+    Musica,
+    Post // <-- ADICIONADO
   } = conexao.models;
   const { id } = req.params;
 
@@ -78,10 +79,11 @@ exports.limparDadosUsuario = async (req, res, conexao) => {
     await Setlist.destroy({ where: { usuario_id: id }, transaction: t });
     await UsuarioConquista.destroy({ where: { usuario_id: id }, transaction: t });
     await Equipamento.destroy({ where: { usuario_id: id }, transaction: t });
-    
-    // --- LINHA CORRIGIDA ---
-    // Agora também apaga todas as músicas do repertório pessoal do usuário
     await Musica.destroy({ where: { usuario_id: id }, transaction: t });
+
+    // --- LINHA CORRIGIDA ---
+    // Agora também apaga todas as publicações do mural do usuário
+    await Post.destroy({ where: { user_id: id }, transaction: t });
 
     await t.commit();
 
