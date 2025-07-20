@@ -34,3 +34,31 @@ exports.iniciarTesteGratuito = async (req, res, conexao) => {
     return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
   }
 };
+
+exports.criarSessaoCheckout = async (req, res, conexao) => {
+  const { plano, planoId } = req.body; // 'planoId' virá do seu painel Stripe
+  const usuarioId = req.usuario.id;
+
+  // URL para onde o usuário será redirecionado após o pagamento
+  const success_url = `${process.env.FRONTEND_URL}/pagamento-sucesso`;
+  const cancel_url = `${process.env.FRONTEND_URL}/assinatura`;
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'subscription', // Importante: define que é uma assinatura
+      client_reference_id: usuarioId, // Guarda o ID do nosso usuário
+      line_items: [{
+        price: planoId, // O ID do preço do plano no Stripe
+        quantity: 1,
+      }],
+      success_url: success_url,
+      cancel_url: cancel_url,
+    });
+
+    return res.json({ url: session.url });
+  } catch (error) {
+    console.error("Erro ao criar sessão de checkout do Stripe:", error);
+    return res.status(500).json({ mensagem: "Não foi possível iniciar o pagamento." });
+  }
+};

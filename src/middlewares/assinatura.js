@@ -6,24 +6,31 @@
  */
 module.exports = () => {
   return (req, res, next) => {
-    // Pega o usuário que foi adicionado à requisição pelo middleware de autenticação
     const usuario = req.usuario;
 
-    // Se por algum motivo o usuário não existir, bloqueia o acesso
     if (!usuario) {
       return res.status(401).json({ mensagem: "Acesso negado. Usuário não autenticado." });
     }
 
-    const statusValido = usuario.status_assinatura === 'ativa' || usuario.status_assinatura === 'teste';
-
-    // Se o status da assinatura for válido, permite que a requisição continue
-    if (statusValido) {
-      return next();
+    // Verifica se a assinatura está 'ativa'
+    if (usuario.status_assinatura === 'ativa') {
+      return next(); // Permite o acesso
     }
 
-    // Se não for válido, retorna um erro 403 (Forbidden)
+    // Verifica se está em 'teste' E se a data do teste ainda é válida
+    if (usuario.status_assinatura === 'teste') {
+      const hoje = new Date();
+      const dataTerminoTeste = new Date(usuario.teste_termina_em);
+
+      if (dataTerminoTeste > hoje) {
+        return next(); // Permite o acesso, pois o teste ainda não acabou
+      }
+    }
+
+    // Se nenhuma das condições acima for atendida, o acesso é bloqueado.
     return res.status(403).json({ 
-      mensagem: "Acesso negado. Esta funcionalidade requer uma assinatura ativa." 
+      mensagem: "Acesso negado. Esta funcionalidade requer uma assinatura ativa.",
+      assinaturaExpirada: true // Enviamos uma flag para o frontend saber o motivo
     });
   };
 };

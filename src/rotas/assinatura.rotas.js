@@ -12,5 +12,8 @@ module.exports = (conexao) => {
   // Rota para o usuário iniciar o período de teste gratuito
   roteador.post('/iniciar-teste', (req, res) => assinaturaControlador.iniciarTesteGratuito(req, res, conexao));
 
+  roteador.post('/criar-sessao-checkout', (req, res) => assinaturaControlador.criarSessaoCheckout(req, res, conexao));
+
+
   return roteador;
 };
