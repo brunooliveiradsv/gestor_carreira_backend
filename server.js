@@ -14,11 +14,11 @@ if (!fs.existsSync(diretorioDeUploads)) {
   console.log(`✅ Diretório de uploads criado em: ${diretorioDeUploads}`);
 }
 
+// Adicione a URL do seu frontend de produção à lista de origens permitidas
 const corsOptions = {
  origin: [
     'https://voxgest.vercel.app', // O seu URL de produção
-    'https://voxgest-13basv8lo-bruno-oliveiras-projects-66e2895a.vercel.app', // O URL específico do seu último deploy
-    'http://localhost:5173' // O seu ambiente de desenvolvimento local
+    'http://localhost:5173'      // O seu ambiente de desenvolvimento local
 ],
   optionsSuccessStatus: 200
 };
