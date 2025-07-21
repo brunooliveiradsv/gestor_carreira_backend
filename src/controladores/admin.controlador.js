@@ -54,8 +54,10 @@ exports.apagarUsuario = async (req, res, conexao) => {
   }
 };
 
+// --- FUNÇÃO PRINCIPAL ATUALIZADA ---
 exports.limparDadosUsuario = async (req, res, conexao) => {
   const {
+    Usuario, // Adicionado para atualizar a vitrine
     Compromisso,
     Transacao,
     Contato,
@@ -70,12 +72,26 @@ exports.limparDadosUsuario = async (req, res, conexao) => {
   const t = await conexao.transaction();
 
   try {
-    console.log(`Iniciando limpeza de dados completa para o usuário ID: ${id}`);
+    console.log(`Iniciando limpeza de dados completa para o utilizador ID: ${id}`);
 
+    // Passo 1: Redefine as configurações da Vitrine na tabela de utilizadores
+    await Usuario.update({
+        biografia: null,
+        url_unica: null,
+        links_redes: null,
+        foto_capa_url: null,
+        video_destaque_url: null,
+        aplausos: 0
+    }, { where: { id }, transaction: t });
+
+    // Passo 2: Remove a flag 'publico' de todos os contatos e setlists do utilizador
+    await Contato.update({ publico: false }, { where: { usuario_id: id }, transaction: t });
+    await Setlist.update({ publico: false }, { where: { usuario_id: id }, transaction: t });
+
+    // Passo 3: Apaga os dados transacionais (lógica existente)
     await Compromisso.destroy({ where: { usuario_id: id }, transaction: t });
     await Transacao.destroy({ where: { usuario_id: id }, transaction: t });
-    await Contato.destroy({ where: { usuario_id: id }, transaction: t });
-    await Setlist.destroy({ where: { usuario_id: id }, transaction: t });
+    // O Contato e o Setlist não são apagados, apenas desmarcados como públicos
     await UsuarioConquista.destroy({ where: { usuario_id: id }, transaction: t });
     await Equipamento.destroy({ where: { usuario_id: id }, transaction: t });
     await Musica.destroy({ where: { usuario_id: id }, transaction: t });
@@ -83,11 +99,11 @@ exports.limparDadosUsuario = async (req, res, conexao) => {
 
     await t.commit();
 
-    console.log(`Dados do usuário ID: ${id} limpos com sucesso.`);
+    console.log(`Dados do utilizador ID: ${id} limpos com sucesso.`);
     return res.status(204).send();
   } catch (erro) {
     await t.rollback();
-    console.error("Erro ao limpar dados do usuário:", erro);
+    console.error("Erro ao limpar dados do utilizador:", erro);
     return res
       .status(500)
       .json({ mensagem: "Ocorreu um erro no servidor ao limpar os dados." });
@@ -107,8 +123,7 @@ exports.criarUsuario = async (req, res, conexao) => {
     if (usuarioExistente) {
       return res.status(400).json({ mensagem: "Este e-mail já está em uso." });
     }
-
-    // LÓGICA DO TESTE AUTOMÁTICO
+    
     const dataTerminoTeste = new Date();
     dataTerminoTeste.setDate(dataTerminoTeste.getDate() + 7);
 
@@ -125,49 +140,6 @@ exports.criarUsuario = async (req, res, conexao) => {
     const { senha: _, ...usuarioSemSenha } = novoUsuario.get({ plain: true });
     return res.status(201).json(usuarioSemSenha);
   } catch (erro) {
-    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
-  }
-};
-
-
-exports.gerenciarAssinatura = async (req, res, conexao) => {
-  const { Usuario } = conexao.models;
-  const { id } = req.params; // ID do usuário a ser modificado
-  const { acao, plano } = req.body; // 'acao' pode ser 'conceder' ou 'remover'
-
-  try {
-    const usuario = await Usuario.findByPk(id);
-    if (!usuario) {
-      return res.status(404).json({ mensagem: "Usuário não encontrado." });
-    }
-
-    if (acao === 'conceder') {
-      if (!plano || (plano !== 'padrao' && plano !== 'premium')) {
-        return res.status(400).json({ mensagem: "Um plano válido ('padrao' ou 'premium') é obrigatório para conceder uma assinatura." });
-      }
-      
-      await usuario.update({
-        plano: plano,
-        status_assinatura: 'ativa',
-        teste_termina_em: null, // Remove qualquer período de teste
-      });
-      return res.status(200).json({ mensagem: `Assinatura do plano ${plano} concedida com sucesso!` });
-
-    } else if (acao === 'remover') {
-      
-      await usuario.update({
-        plano: null,
-        status_assinatura: 'inativa', // Ou 'cancelada', dependendo da sua regra de negócio
-        teste_termina_em: null,
-      });
-      return res.status(200).json({ mensagem: "Assinatura do usuário removida com sucesso." });
-
-    } else {
-      return res.status(400).json({ mensagem: "Ação inválida. Use 'conceder' ou 'remover'." });
-    }
-
-  } catch (erro) {
-    console.error("Erro ao gerir assinatura de usuário:", erro);
     return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
   }
 };
