@@ -3,12 +3,31 @@ const { Op } = require("sequelize");
 
 // Usuário: Lista as músicas do SEU repertório (cópias e criações próprias)
 exports.listarRepertorioUsuario = async (req, res, conexao) => {
-  const { Musica } = conexao.models;
+  const { Musica, Tag } = conexao.models; // Tag ainda é necessário para o include
   const usuarioId = req.usuario.id;
+  const { termoBusca, artista, tom, bpm } = req.query; // Novos filtros
+
+  // Constrói a cláusula 'where' dinamicamente
+  const whereClause = { usuario_id: usuarioId };
+  if (termoBusca) {
+    whereClause.nome = { [Op.iLike]: `%${termoBusca}%` };
+  }
+  if (artista) {
+    whereClause.artista = { [Op.iLike]: `%${artista}%` };
+  }
+  if (tom) {
+    // Busca exata, mas insensível a maiúsculas/minúsculas
+    whereClause.tom = { [Op.iLike]: tom }; 
+  }
+  if (bpm) {
+    // Busca exata para o número de BPM
+    whereClause.bpm = bpm; 
+  }
+
   try {
     const musicas = await Musica.findAll({
-      where: { usuario_id: usuarioId },
-      include: ['musica_mestre'],
+      where: whereClause, // Usa a cláusula 'where' construída
+      include: ['musica_mestre', 'tags'], // Ainda incluímos as tags para exibição no card
       order: [['artista', 'ASC'], ['nome', 'ASC']]
     });
 
@@ -18,8 +37,6 @@ exports.listarRepertorioUsuario = async (req, res, conexao) => {
         if (musicaJSON.master_id && musicaJSON.musica_mestre) {
             const mestre = musicaJSON.musica_mestre;
             
-            // --- LÓGICA DE COMPARAÇÃO CORRIGIDA ---
-            // Trata valores nulos/undefined como strings vazias para uma comparação justa
             const tomUsuario = musicaJSON.tom || '';
             const tomMestre = mestre.tom || '';
             const bpmUsuario = musicaJSON.bpm || null;
