@@ -14,25 +14,70 @@ exports.handleStripeWebhook = async (req, res, conexao) => {
     }
 
     const { Usuario } = conexao.models;
+    const session = event.data.object;
 
-    // Lidar com o evento
-    if (event.type === 'checkout.session.completed') {
-        const session = event.data.object;
-        const usuarioId = session.client_reference_id;
+    // Usamos um switch para lidar com diferentes tipos de eventos
+    switch (event.type) {
+        case 'checkout.session.completed': {
+            const usuarioId = session.client_reference_id;
+            const customerId = session.customer;
+            const subscription = await stripe.subscriptions.retrieve(session.subscription);
+            const planoId = subscription.items.data[0].price.id;
 
-        try {
-            const usuario = await Usuario.findByPk(usuarioId);
-            if (usuario) {
-                await usuario.update({
-                    status_assinatura: 'ativa',
-                    // Aqui você também guardaria o ID da assinatura do Stripe (session.subscription)
-                    // para poder geri-la no futuro (cancelamentos, etc.)
-                });
-                console.log(`✅ Assinatura ativada para o usuário ID: ${usuarioId}`);
+            // Mapeie os seus Price IDs para os nomes dos planos
+            const planosStripe = {
+                [process.env.STRIPE_PRICE_ID_PADRAO_MENSAL]: 'padrao',
+                [process.env.STRIPE_PRICE_ID_PADRAO_ANUAL]: 'padrao',
+                [process.env.STRIPE_PRICE_ID_PREMIUM_MENSAL]: 'premium',
+                [process.env.STRIPE_PRICE_ID_PREMIUM_ANUAL]: 'premium',
+            };
+            
+            try {
+                const usuario = await Usuario.findByPk(usuarioId);
+                if (usuario) {
+                    await usuario.update({
+                        status_assinatura: 'ativa',
+                        stripe_customer_id: customerId, // <-- GUARDA O CUSTOMER ID
+                        plano: planosStripe[planoId] || null,
+                    });
+                    console.log(`✅ Assinatura ativada para o usuário ID: ${usuarioId}`);
+                }
+            } catch (error) {
+                console.error("Erro ao atualizar usuário após pagamento:", error);
+                return res.sendStatus(500);
             }
-        } catch (error) {
-            console.error("Erro ao atualizar usuário após pagamento:", error);
-            return res.sendStatus(500);
+            break;
+        }
+
+        case 'customer.subscription.updated': {
+            const customerId = session.customer;
+            const planoId = session.items.data[0].price.id;
+            const planosStripe = { /* ... seu mapeamento de planos ... */ };
+
+            try {
+                await Usuario.update(
+                    { plano: planosStripe[planoId] || null },
+                    { where: { stripe_customer_id: customerId } }
+                );
+                console.log(`✅ Plano atualizado para o cliente: ${customerId}`);
+            } catch (error) {
+                console.error("Erro ao atualizar plano via webhook:", error);
+            }
+            break;
+        }
+
+        case 'customer.subscription.deleted': {
+            const customerId = session.customer;
+            try {
+                await Usuario.update(
+                    { status_assinatura: 'cancelada', plano: null },
+                    { where: { stripe_customer_id: customerId } }
+                );
+                console.log(`✅ Assinatura cancelada para o cliente: ${customerId}`);
+            } catch (error) {
+                console.error("Erro ao cancelar assinatura via webhook:", error);
+            }
+            break;
         }
     }
 

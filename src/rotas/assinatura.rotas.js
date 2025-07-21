@@ -16,5 +16,7 @@ module.exports = (conexao) => {
 
   roteador.put('/trocar-plano', (req, res) => assinaturaControlador.trocarPlano(req, res, conexao));
 
+   roteador.post('/criar-sessao-portal', (req, res) => assinaturaControlador.criarSessaoPortal(req, res, conexao));
+
   return roteador;
 };

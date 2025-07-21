@@ -16,6 +16,7 @@ class Usuario extends Model {
       plano: DataTypes.ENUM('padrao', 'premium'),
       status_assinatura: DataTypes.ENUM('inativa', 'ativa', 'teste', 'cancelada', 'inadimplente'),
       teste_termina_em: DataTypes.DATE,
+       stripe_customer_id: DataTypes.STRING,
     }, { sequelize, tableName: 'usuarios' })
   }
   

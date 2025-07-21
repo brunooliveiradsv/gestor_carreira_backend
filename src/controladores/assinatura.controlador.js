@@ -102,3 +102,30 @@ exports.trocarPlano = async (req, res, conexao) => {
     return res.status(500).json({ mensagem: "Ocorreu um erro no servidor ao tentar trocar de plano." });
   }
 };
+
+exports.criarSessaoPortal = async (req, res, conexao) => {
+  const { Usuario } = conexao.models;
+  const usuarioId = req.usuario.id;
+
+  try {
+    const usuario = await Usuario.findByPk(usuarioId);
+    const customerId = usuario.stripe_customer_id;
+
+    if (!customerId) {
+      return res.status(400).json({ mensagem: "Este usuário não possui uma assinatura para gerir." });
+    }
+
+    // URL para onde o usuário voltará após sair do portal
+    const return_url = `${process.env.FRONTEND_URL}/configuracoes`;
+
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: return_url,
+    });
+
+    return res.json({ url: portalSession.url });
+  } catch (error) {
+    console.error("Erro ao criar sessão do portal do cliente:", error);
+    return res.status(500).json({ mensagem: "Não foi possível aceder ao portal de gestão." });
+  }
+};
