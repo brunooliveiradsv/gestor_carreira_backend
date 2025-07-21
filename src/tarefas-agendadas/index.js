@@ -40,3 +40,35 @@ exports.iniciarTarefas = (conexao) => {
     }
   });
 };
+
+// Roda uma vez por dia, à meia-noite.
+  cron.schedule('0 0 * * *', async () => {
+    console.log('Rodando tarefa agendada: Verificando expiração de assinaturas em teste...');
+    try {
+      const hoje = new Date();
+
+      // Encontra todos os usuários cujo teste já terminou mas o status ainda é 'teste'
+      const [updatedCount] = await Usuario.update(
+        { 
+          status_assinatura: 'inativa', // Altera o status para inativa
+          plano: null // Remove o plano premium associado ao teste
+        },
+        {
+          where: {
+            status_assinatura: 'teste',
+            teste_termina_em: {
+              [Op.lt]: hoje // 'lt' = Less Than (menor que a data/hora atual)
+            }
+          }
+        }
+      );
+
+      if (updatedCount > 0) {
+        console.log(`${updatedCount} assinaturas em teste expiraram e foram atualizadas para 'inativa'.`);
+      } else {
+        console.log('Nenhuma assinatura em teste expirou.');
+      }
+    } catch (erro) {
+      console.error('Erro na tarefa de verificação de expiração de testes:', erro);
+    }
+  });
