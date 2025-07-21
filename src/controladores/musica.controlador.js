@@ -1,42 +1,36 @@
 // src/controladores/musica.controlador.js
-const { Op } = require("sequelize");
+const { Op, Sequelize } = require("sequelize");
 
-// Usuário: Lista as músicas do SEU repertório (cópias e criações próprias)
 exports.listarRepertorioUsuario = async (req, res, conexao) => {
-  const { Musica, Tag } = conexao.models; // Tag ainda é necessário para o include
+  const { Musica, Tag } = conexao.models;
   const usuarioId = req.usuario.id;
-  const { termoBusca, artista, tom, bpm } = req.query; // Novos filtros
+  const { buscaGeral } = req.query;
 
-  // Constrói a cláusula 'where' dinamicamente
   const whereClause = { usuario_id: usuarioId };
-  if (termoBusca) {
-    whereClause.nome = { [Op.iLike]: `%${termoBusca}%` };
-  }
-  if (artista) {
-    whereClause.artista = { [Op.iLike]: `%${artista}%` };
-  }
-  if (tom) {
-    // Busca exata, mas insensível a maiúsculas/minúsculas
-    whereClause.tom = { [Op.iLike]: tom }; 
-  }
-  if (bpm) {
-    // Busca exata para o número de BPM
-    whereClause.bpm = bpm; 
+
+  if (buscaGeral) {
+    whereClause[Op.or] = [
+      { nome: { [Op.iLike]: `%${buscaGeral}%` } },
+      { artista: { [Op.iLike]: `%${buscaGeral}%` } },
+      { tom: { [Op.iLike]: `%${buscaGeral}%` } },
+      Sequelize.where(
+        Sequelize.cast(Sequelize.col('bpm'), 'TEXT'),
+        { [Op.iLike]: `%${buscaGeral}%` }
+      )
+    ];
   }
 
   try {
     const musicas = await Musica.findAll({
-      where: whereClause, // Usa a cláusula 'where' construída
-      include: ['musica_mestre', 'tags'], // Ainda incluímos as tags para exibição no card
+      where: whereClause,
+      include: ['musica_mestre', 'tags'],
       order: [['artista', 'ASC'], ['nome', 'ASC']]
     });
 
     const repertorioProcessado = musicas.map(musica => {
         const musicaJSON = musica.toJSON();
-        
         if (musicaJSON.master_id && musicaJSON.musica_mestre) {
             const mestre = musicaJSON.musica_mestre;
-            
             const tomUsuario = musicaJSON.tom || '';
             const tomMestre = mestre.tom || '';
             const bpmUsuario = musicaJSON.bpm || null;
@@ -60,7 +54,7 @@ exports.listarRepertorioUsuario = async (req, res, conexao) => {
     return res.status(200).json(repertorioProcessado);
 
   } catch (erro) {
-    console.error("Erro ao listar repertório do usuário:", erro);
+    console.error("Erro ao listar repertório do utilizador:", erro);
     return res.status(500).json({ mensagem: "Erro ao listar seu repertório." });
   }
 };
@@ -104,16 +98,36 @@ exports.buscarMusicasPublicas = async (req, res, conexao) => {
     }
 };
 
+// --- FUNÇÃO ATUALIZADA ---
 exports.criarManual = async (req, res, conexao) => {
     const { Musica } = conexao.models;
     const { nome, artista, tom, notas_adicionais } = req.body;
+    const usuarioId = req.usuario.id;
+
     if (!nome || !artista) {
         return res.status(400).json({ mensagem: "Nome e artista são obrigatórios." });
     }
     try {
+        // 1. Verifica se a música já existe (case-insensitive)
+        const musicaExistente = await Musica.findOne({
+            where: {
+                usuario_id: usuarioId,
+                // Procura onde o nome e o artista são iguais, ignorando maiúsculas/minúsculas
+                [Op.and]: [
+                    Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('nome')), Sequelize.fn('LOWER', nome)),
+                    Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('artista')), Sequelize.fn('LOWER', artista))
+                ]
+            }
+        });
+
+        if (musicaExistente) {
+            return res.status(400).json({ mensagem: "Esta música já existe no seu repertório." });
+        }
+
+        // 2. Se não existir, cria a nova música
         const novaMusica = await Musica.create({
             nome, artista, tom, notas_adicionais,
-            usuario_id: req.usuario.id,
+            usuario_id: usuarioId,
             master_id: null,
             is_publica: false
         });
@@ -124,6 +138,7 @@ exports.criarManual = async (req, res, conexao) => {
     }
 };
 
+// --- FUNÇÃO ATUALIZADA ---
 exports.importar = async (req, res, conexao) => {
     const { Musica } = conexao.models;
     const { master_id } = req.body;
@@ -133,9 +148,20 @@ exports.importar = async (req, res, conexao) => {
         if (!musicaMestre) {
             return res.status(404).json({ mensagem: "Música do banco de dados não encontrada ou não é pública." });
         }
+
+        // 1. Verifica se o utilizador já importou esta música
+        const jaImportada = await Musica.findOne({
+            where: {
+                usuario_id: usuarioId,
+                master_id: master_id
+            }
+        });
+
+        if (jaImportada) {
+            return res.status(400).json({ mensagem: "Esta música já foi importada para o seu repertório." });
+        }
         
-        // --- LÓGICA DE CÓPIA CORRIGIDA ---
-        // Garante que todos os campos relevantes sejam copiados
+        // 2. Se não importou, cria a cópia
         const novaCopia = await Musica.create({
             nome: musicaMestre.nome,
             artista: musicaMestre.artista,
