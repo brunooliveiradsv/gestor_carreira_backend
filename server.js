@@ -45,6 +45,7 @@ const musicaMestreRotas = require("./src/rotas/musica_mestre.rotas.js");
 const logRotas = require("./src/rotas/log.rotas.js");
 const postRotas = require("./src/rotas/post.rotas.js"); 
 const assinaturaRotas = require("./src/rotas/assinatura.rotas.js");
+const webhookRotas = require("./src/rotas/webhook.rotas.js");
 
 // Registro de todas as rotas da API
 app.use("/api/usuarios", usuarioRotas(conexao));
@@ -63,6 +64,7 @@ app.use("/api/admin/musicas", musicaMestreRotas(conexao));
 app.use("/api/admin/logs", logRotas(conexao)); //
 app.use("/api/posts", postRotas(conexao)); // Rota para posts 
 app.use("/api/assinatura", assinaturaRotas(conexao)); // Rota para assinatura
+app.use("/webhook", webhookRotas(conexao)); // Rota para webhooks do Stripe
 
 const PORTA = process.env.PORT || 3000;
 
