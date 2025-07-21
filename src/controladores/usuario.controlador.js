@@ -8,7 +8,8 @@ const logService = require('../servicos/log.servico'); // Importa o serviço de 
 exports.atualizarPerfilPublico = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
-  const { biografia, url_unica, links_redes } = req.body;
+  // Adiciona video_destaque_url à desestruturação
+  const { biografia, url_unica, links_redes, video_destaque_url } = req.body;
 
   try {
     if (url_unica) {
@@ -27,6 +28,9 @@ exports.atualizarPerfilPublico = async (req, res, conexao) => {
     if (biografia !== undefined) dadosParaAtualizar.biografia = biografia;
     if (url_unica !== undefined) dadosParaAtualizar.url_unica = url_unica;
     if (links_redes !== undefined) dadosParaAtualizar.links_redes = links_redes;
+    // Adiciona o vídeo aos dados a serem atualizados
+    if (video_destaque_url !== undefined) dadosParaAtualizar.video_destaque_url = video_destaque_url;
+
 
     const [updated] = await Usuario.update(dadosParaAtualizar, {
       where: { id: usuarioId }
@@ -64,8 +68,6 @@ exports.registrar = async (req, res, conexao) => {
       return res.status(400).json({ mensagem: 'Este e-mail já está em uso.' });
     }
 
-    // LÓGICA DO TESTE AUTOMÁTICO
-    // 1. Calcula a data de término do teste: hoje + 7 dias
     const dataTerminoTeste = new Date();
     dataTerminoTeste.setDate(dataTerminoTeste.getDate() + 7);
 
@@ -75,7 +77,6 @@ exports.registrar = async (req, res, conexao) => {
       email, 
       senha: senhaCriptografada, 
       role: 'usuario',
-      // 2. Define os campos da assinatura diretamente na criação
       plano: 'premium',
       status_assinatura: 'teste',
       teste_termina_em: dataTerminoTeste
@@ -180,6 +181,33 @@ exports.buscarPerfil = async (req, res, conexao) => {
   return res.status(200).json(perfil);
 };
 
+exports.atualizarNome = async (req, res, conexao) => {
+  const { Usuario } = conexao.models;
+  const usuarioId = req.usuario.id;
+  const { nome } = req.body;
+
+  if (!nome) {
+    return res.status(400).json({ mensagem: "O nome é obrigatório." });
+  }
+
+  try {
+    const [updated] = await Usuario.update({ nome }, {
+      where: { id: usuarioId }
+    });
+
+    if (updated) {
+      const usuarioAtualizado = await Usuario.findByPk(usuarioId, { attributes: { exclude: ['senha'] } });
+      logService.registrarAcao(conexao, usuarioId, 'UPDATE_PROFILE_NAME', { new_name: nome });
+      return res.status(200).json(usuarioAtualizado.get({ plain: true }));
+    }
+    
+    return res.status(404).json({ mensagem: "Utilizador não encontrado." });
+  } catch (error) {
+    console.error("Erro ao atualizar o nome:", error);
+    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
+  }
+};
+
 exports.atualizarEmail = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
@@ -277,29 +305,30 @@ exports.atualizarFoto = async (req, res, conexao) => {
   }
 };
 
-exports.atualizarNome = async (req, res, conexao) => {
+exports.atualizarFotoCapa = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
-  const { nome } = req.body;
 
-  if (!nome) {
-    return res.status(400).json({ mensagem: "O nome é obrigatório." });
+  if (!req.file) {
+    return res.status(400).json({ mensagem: 'Nenhum ficheiro de imagem foi enviado.' });
   }
 
+  const fotoCapaUrl = req.file.path; 
+
   try {
-    const [updated] = await Usuario.update({ nome }, {
+    const [updated] = await Usuario.update({ foto_capa_url: fotoCapaUrl }, {
       where: { id: usuarioId }
     });
 
     if (updated) {
       const usuarioAtualizado = await Usuario.findByPk(usuarioId, { attributes: { exclude: ['senha'] } });
-      logService.registrarAcao(conexao, usuarioId, 'UPDATE_PROFILE_NAME', { new_name: nome });
+      logService.registrarAcao(conexao, usuarioId, 'UPDATE_COVER_PICTURE', { new_url: fotoCapaUrl });
       return res.status(200).json(usuarioAtualizado.get({ plain: true }));
     }
     
     return res.status(404).json({ mensagem: "Utilizador não encontrado." });
   } catch (error) {
-    console.error("Erro ao atualizar o nome:", error);
-    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
+    console.error("Erro ao atualizar a foto de capa:", error);
+    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor ao salvar a foto." });
   }
 };

@@ -27,6 +27,7 @@ module.exports = (conexao) => {
 
   // Rota para upload da foto de perfil, usando o Multer com a configuração do Cloudinary
   roteador.put('/perfil/foto', upload.single('foto'), (req, res) => usuarioControlador.atualizarFoto(req, res, conexao));
+  roteador.put('/perfil/capa', upload.single('capa'), (req, res) => usuarioControlador.atualizarFotoCapa(req, res, conexao));
 
   return roteador;
 };
