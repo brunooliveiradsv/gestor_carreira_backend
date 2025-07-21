@@ -112,13 +112,13 @@ module.exports = {
       // Repertório
       {
         nome: "O Poeta",
-        descricao: "Criou seu primeiro repertório.",
+        descricao: "Criou seu primeiro setlist.",
         tipo_condicao: "PRIMEIRO_REPERTORIO_CRIADO",
         valor_condicao: 1,
       },
       {
         nome: "Versátil",
-        descricao: "Criou 5 repertórios diferentes.",
+        descricao: "Criou 5 setlists diferentes.",
         tipo_condicao: "CONTAGEM_REPERTORIOS",
         valor_condicao: 5,
       },
