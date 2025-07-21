@@ -5,12 +5,12 @@ const conquistaServico = require('../servicos/conquista.servico');
 exports.listarRepertorioUsuario = async (req, res, conexao) => {
   const { Musica } = conexao.models;
   const usuarioId = req.usuario.id;
-  // Agora recebemos múltiplos parâmetros de filtro
+  // Voltamos a ler os múltiplos parâmetros de filtro
   const { termoBusca, tom, bpm } = req.query;
 
   const whereClause = { usuario_id: usuarioId };
-
-  // Se um termo de busca principal foi enviado, ele procura no NOME OU no ARTISTA
+  
+  // Lógica de busca separada
   if (termoBusca) {
     whereClause[Op.or] = [
       { nome: { [Op.iLike]: `%${termoBusca}%` } },
