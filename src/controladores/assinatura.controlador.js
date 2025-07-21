@@ -62,3 +62,43 @@ exports.criarSessaoCheckout = async (req, res, conexao) => {
     return res.status(500).json({ mensagem: "Não foi possível iniciar o pagamento." });
   }
 };
+
+exports.trocarPlano = async (req, res, conexao) => {
+  const { Usuario } = conexao.models;
+  const { novoPlano } = req.body;
+  const usuarioId = req.usuario.id;
+
+  try {
+    const usuario = await Usuario.findByPk(usuarioId);
+
+    // Validações
+    if (!usuario) {
+      return res.status(404).json({ mensagem: "Usuário não encontrado." });
+    }
+    if (usuario.status_assinatura !== 'ativa') {
+      return res.status(403).json({ mensagem: "Apenas assinaturas ativas podem ser alteradas." });
+    }
+    if (!novoPlano || (novoPlano !== 'padrao' && novoPlano !== 'premium')) {
+      return res.status(400).json({ mensagem: "Plano inválido." });
+    }
+    if (usuario.plano === novoPlano) {
+      return res.status(400).json({ mensagem: "Você já está neste plano." });
+    }
+
+    // Atualiza o plano do usuário
+    await usuario.update({
+      plano: novoPlano
+    });
+
+    const { senha, ...usuarioAtualizado } = usuario.get({ plain: true });
+
+    return res.status(200).json({
+      mensagem: `Seu plano foi alterado para ${novoPlano} com sucesso!`,
+      usuario: usuarioAtualizado
+    });
+
+  } catch (erro) {
+    console.error("Erro ao trocar de plano:", erro);
+    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor ao tentar trocar de plano." });
+  }
+};
