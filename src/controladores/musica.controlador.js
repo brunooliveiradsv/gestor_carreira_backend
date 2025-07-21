@@ -1,26 +1,24 @@
 // src/controladores/musica.controlador.js
 const { Op, Sequelize } = require("sequelize");
+const conquistaServico = require('../servicos/conquista.servico');
 
 exports.listarRepertorioUsuario = async (req, res, conexao) => {
   const { Musica } = conexao.models;
   const usuarioId = req.usuario.id;
-  // Voltamos a ler os múltiplos parâmetros de filtro
-  const { termoBusca, artista, tom, bpm } = req.query;
+  const { buscaGeral } = req.query;
 
   const whereClause = { usuario_id: usuarioId };
-  
-  // Lógica de busca separada
-  if (termoBusca) {
-    whereClause.nome = { [Op.iLike]: `%${termoBusca}%` };
-  }
-  if (artista) {
-    whereClause.artista = { [Op.iLike]: `%${artista}%` };
-  }
-  if (tom) {
-    whereClause.tom = { [Op.iLike]: tom };
-  }
-  if (bpm) {
-    whereClause.bpm = bpm;
+
+  if (buscaGeral) {
+    whereClause[Op.or] = [
+      { nome: { [Op.iLike]: `%${buscaGeral}%` } },
+      { artista: { [Op.iLike]: `%${buscaGeral}%` } },
+      { tom: { [Op.iLike]: `%${buscaGeral}%` } },
+      Sequelize.where(
+        Sequelize.cast(Sequelize.col('Musica.bpm'), 'TEXT'),
+        { [Op.iLike]: `%${buscaGeral}%` }
+      )
+    ];
   }
 
   try {
@@ -130,6 +128,9 @@ exports.criarManual = async (req, res, conexao) => {
             master_id: null,
             is_publica: false
         });
+        
+        conquistaServico.verificarEConcederConquistas(usuarioId, 'CONTAGEM_MUSICAS', conexao);
+        
         return res.status(201).json(novaMusica);
     } catch (error) {
         console.error("Erro ao criar música manual:", error);
@@ -170,6 +171,9 @@ exports.importar = async (req, res, conexao) => {
             master_id: musicaMestre.id,
             is_publica: false
         });
+
+        conquistaServico.verificarEConcederConquistas(usuarioId, 'CONTAGEM_MUSICAS', conexao);
+        
         return res.status(201).json(novaCopia);
     } catch (error) {
         console.error("Erro ao importar música:", error);
@@ -204,8 +208,8 @@ exports.apagar = async (req, res, conexao) => {
             return res.status(204).send();
         }
         return res.status(404).json({ mensagem: "Música não encontrada no seu repertório." });
-    } catch (error) {
-        console.error("Erro ao apagar música:", error);
+    } catch (erro) {
+        console.error("Erro ao apagar música:", erro);
         return res.status(500).json({ mensagem: "Erro ao apagar música." });
     }
 };

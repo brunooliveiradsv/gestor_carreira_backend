@@ -1,8 +1,9 @@
 // src/controladores/sugestao.controlador.js
+const conquistaServico = require('../servicos/conquista.servico');
 
 exports.criarSugestao = async (req, res, conexao) => {
   const { SugestaoMusica, Musica } = conexao.models;
-  const { musica_id } = req.params; // ID da música do *usuário*
+  const { musica_id } = req.params;
   const { campo_sugerido, valor_sugerido } = req.body;
   const usuarioId = req.usuario.id;
 
@@ -27,7 +28,7 @@ exports.criarSugestao = async (req, res, conexao) => {
     }
 
     const novaSugestao = await SugestaoMusica.create({
-      musica_id: musicaDoUsuario.master_id, // A sugestão aponta para a música MESTRE
+      musica_id: musicaDoUsuario.master_id,
       usuario_id: usuarioId,
       campo_sugerido,
       valor_sugerido,
@@ -40,18 +41,12 @@ exports.criarSugestao = async (req, res, conexao) => {
   }
 };
 
-/**
- * Lista todas as sugestões com o status 'pendente' para o painel de administração.
- */
 exports.listarSugestoesPendentes = async (req, res, conexao) => {
   const { SugestaoMusica, Musica, Usuario } = conexao.models;
   try {
     const sugestoes = await SugestaoMusica.findAll({
       where: { status: "pendente" },
       include: [
-        // --- CORREÇÃO AQUI ---
-        // Removemos o 'attributes' para buscar o objeto completo da música,
-        // o que nos dará acesso ao valor antigo do campo.
         { model: Musica, as: "musica" },
         { model: Usuario, as: "autor", attributes: ["nome", "email"] },
       ],
@@ -66,9 +61,6 @@ exports.listarSugestoesPendentes = async (req, res, conexao) => {
   }
 };
 
-/**
- * Aprova uma sugestão, atualizando a música original e o status da sugestão.
- */
 exports.aprovarSugestao = async (req, res, conexao) => {
   const { SugestaoMusica, Musica } = conexao.models;
   const { id } = req.params;
@@ -95,6 +87,10 @@ exports.aprovarSugestao = async (req, res, conexao) => {
     await sugestao.update({ status: "aprovada" }, { transaction: t });
 
     await t.commit();
+    
+    // Aciona a verificação da conquista para o autor da sugestão
+    conquistaServico.verificarEConcederConquistas(sugestao.usuario_id, 'SUGESTAO_APROVADA', conexao);
+
     return res
       .status(200)
       .json({ mensagem: "Sugestão aprovada e música atualizada com sucesso!" });
@@ -105,9 +101,6 @@ exports.aprovarSugestao = async (req, res, conexao) => {
   }
 };
 
-/**
- * Rejeita uma sugestão, alterando o seu status.
- */
 exports.rejeitarSugestao = async (req, res, conexao) => {
   const { SugestaoMusica } = conexao.models;
   const { id } = req.params;

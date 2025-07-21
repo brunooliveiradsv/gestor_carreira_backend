@@ -1,17 +1,17 @@
 // src/controladores/vitrine.controlador.js
 const { Op } = require("sequelize");
+const conquistaServico = require('../servicos/conquista.servico');
 
 exports.obterVitrine = async (req, res, conexao) => {
     const { Usuario, Compromisso, Contato, Setlist, Musica, UsuarioConquista, Post } = conexao.models;
     const { url_unica } = req.params;
 
     try {
-        // 1. Encontrar o artista pela URL única, incluindo os novos campos de capa e vídeo
         const artista = await Usuario.findOne({
             where: { url_unica },
             attributes: [
                 'id', 'nome', 'foto_url', 'biografia', 'aplausos', 'links_redes',
-                'foto_capa_url', 'video_destaque_url' // Campos corrigidos
+                'foto_capa_url', 'video_destaque_url'
             ]
         });
 
@@ -19,7 +19,6 @@ exports.obterVitrine = async (req, res, conexao) => {
             return res.status(404).json({ mensagem: "Página do artista não encontrada." });
         }
         
-        // 2. Buscar os próximos shows públicos
         const proximosShows = await Compromisso.findAll({
             where: {
                 usuario_id: artista.id,
@@ -32,13 +31,11 @@ exports.obterVitrine = async (req, res, conexao) => {
             limit: 5
         });
 
-        // 3. Buscar o contato público (se houver)
         const contatoPublico = await Contato.findOne({
             where: { usuario_id: artista.id, publico: true },
             attributes: ['nome', 'telefone', 'email', 'funcao']
         });
         
-        // 4. Buscar o setlist público com as músicas
         const setlistPublico = await Setlist.findOne({
             where: { usuario_id: artista.id, publico: true },
             attributes: ['nome', 'notas_adicionais'],
@@ -50,7 +47,6 @@ exports.obterVitrine = async (req, res, conexao) => {
             }]
         });
 
-        // 5. Buscar as músicas mais populares
         const musicasPopulares = await Musica.findAll({
             where: { usuario_id: artista.id },
             order: [['popularidade', 'DESC']],
@@ -58,7 +54,6 @@ exports.obterVitrine = async (req, res, conexao) => {
             attributes: ['nome', 'artista', 'popularidade']
         });
 
-        // 6. Buscar estatísticas da carreira
         const totalShowsRealizados = await Compromisso.count({
             where: { usuario_id: artista.id, tipo: 'Show', status: 'Realizado' }
         });
@@ -75,14 +70,12 @@ exports.obterVitrine = async (req, res, conexao) => {
             conquistas: totalConquistas
         };
 
-        // 7. Buscar os 5 posts mais recentes do artista
         const postsRecentes = await Post.findAll({
             where: { user_id: artista.id },
             order: [['created_at', 'DESC']],
             limit: 5
         });
 
-        // 8. Montar o objeto de resposta final
         const vitrine = {
             artista: artista.toJSON(),
             proximosShows,
@@ -112,6 +105,9 @@ exports.registrarAplauso = async (req, res, conexao) => {
         }
 
         const novoTotal = await artista.increment('aplausos', { by: 1 });
+        
+        // Aciona a verificação da conquista para o artista que recebeu o aplauso
+        conquistaServico.verificarEConcederConquistas(artista.id, 'CONTAGEM_APLAUSOS', conexao);
 
         return res.status(200).json({ aplausos: novoTotal.aplausos });
         

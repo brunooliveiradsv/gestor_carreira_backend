@@ -3,15 +3,17 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const emailServico = require('../servicos/email.servico');
-const logService = require('../servicos/log.servico'); // Importa o serviço de log
+const logService = require('../servicos/log.servico');
+const conquistaServico = require('../servicos/conquista.servico');
 
 exports.atualizarPerfilPublico = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
-  // Adiciona video_destaque_url à desestruturação
   const { biografia, url_unica, links_redes, video_destaque_url } = req.body;
 
   try {
+    const usuarioAntes = await Usuario.findByPk(usuarioId);
+
     if (url_unica) {
       const urlExistente = await Usuario.findOne({
         where: {
@@ -28,9 +30,7 @@ exports.atualizarPerfilPublico = async (req, res, conexao) => {
     if (biografia !== undefined) dadosParaAtualizar.biografia = biografia;
     if (url_unica !== undefined) dadosParaAtualizar.url_unica = url_unica;
     if (links_redes !== undefined) dadosParaAtualizar.links_redes = links_redes;
-    // Adiciona o vídeo aos dados a serem atualizados
     if (video_destaque_url !== undefined) dadosParaAtualizar.video_destaque_url = video_destaque_url;
-
 
     const [updated] = await Usuario.update(dadosParaAtualizar, {
       where: { id: usuarioId }
@@ -40,6 +40,11 @@ exports.atualizarPerfilPublico = async (req, res, conexao) => {
       const usuarioAtualizado = await Usuario.findByPk(usuarioId, { attributes: { exclude: ['senha'] } });
       const perfil = usuarioAtualizado.get({ plain: true });
       logService.registrarAcao(conexao, usuarioId, 'UPDATE_PUBLIC_PROFILE', { changes: Object.keys(dadosParaAtualizar) });
+
+      if (!usuarioAntes.url_unica && url_unica) {
+        conquistaServico.verificarEConcederConquistas(usuarioId, 'PRIMEIRA_VITRINE_CRIADA', conexao);
+      }
+
       return res.status(200).json(perfil);
     }
     

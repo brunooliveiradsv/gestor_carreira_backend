@@ -122,28 +122,38 @@ module.exports = {
         tipo_condicao: "CONTAGEM_REPERTORIOS",
         valor_condicao: 5,
       },
-    ].map((c) => ({ ...c, created_at: new Date(), updated_at: new Date() })); // Adiciona timestamps
+      // Assinatura e Vitrine
+      { nome: "Artista Premium", descricao: "Tornou-se um assinante do VOXGest.", tipo_condicao: "ASSINATURA_ATIVA", valor_condicao: 1, },
+      { nome: "Meu Espaço na Web", descricao: "Criou e salvou sua página pública (Vitrine) pela primeira vez.", tipo_condicao: "PRIMEIRA_VITRINE_CRIADA", valor_condicao: 1, },
+      { nome: "Aclamação Popular", descricao: "Recebeu 10 aplausos na sua página Vitrine.", tipo_condicao: "CONTAGEM_APLAUSOS", valor_condicao: 10, },
+      { nome: "Querido Pelo Público", descricao: "Recebeu 50 aplausos na sua página Vitrine.", tipo_condicao: "CONTAGEM_APLAUSOS", valor_condicao: 50, },
+      { nome: "Ídolo Local", descricao: "Recebeu 100 aplausos na sua página Vitrine.", tipo_condicao: "CONTAGEM_APLAUSOS", valor_condicao: 100, },
+      { nome: "Estrela em Ascensão", descricao: "Recebeu 500 aplausos na sua página Vitrine.", tipo_condicao: "CONTAGEM_APLAUSOS", valor_condicao: 500, },
+      { nome: "Fenómeno", descricao: "Alcançou a marca de 1.000 aplausos na sua página Vitrine.", tipo_condicao: "CONTAGEM_APLAUSOS", valor_condicao: 1000, },
+      { nome: "Superstar", descricao: "Alcançou a incrível marca de 5.000 aplausos.", tipo_condicao: "CONTAGEM_APLAUSOS", valor_condicao: 5000, },
+      { nome: "Lenda Viva", descricao: "Alcançou o status lendário com 10.000 aplausos!", tipo_condicao: "CONTAGEM_APLAUSOS", valor_condicao: 10000, },
 
-    // 1. Busca os nomes de todas as conquistas que já estão no banco de dados
+      // Repertório e Colaboração
+      { nome: "Colecionador Musical", descricao: "Adicionou 10 músicas ao seu repertório.", tipo_condicao: "CONTAGEM_MUSICAS", valor_condicao: 10, },
+      { nome: "Musicólogo", descricao: "Adicionou 50 músicas ao seu repertório.", tipo_condicao: "CONTAGEM_MUSICAS", valor_condicao: 50, },
+      { nome: "O Colaborador", descricao: "Teve sua primeira sugestão de melhoria de música aprovada.", tipo_condicao: "SUGESTAO_APROVADA", valor_condicao: 1, },
+
+    ].map((c) => ({ ...c, created_at: new Date(), updated_at: new Date() }));
+
     const conquistasExistentes = await queryInterface.sequelize.query(
       `SELECT nome FROM conquistas;`
     );
-
     const nomesExistentes = conquistasExistentes[0].map((c) => c.nome);
-
-    // 2. Filtra a lista, mantendo apenas as conquistas que AINDA NÃO existem
     const conquistasNovas = conquistasParaAdicionar.filter(
       (c) => !nomesExistentes.includes(c.nome)
     );
 
-    // 3. Insere apenas as novas conquistas, se houver alguma
     if (conquistasNovas.length > 0) {
       await queryInterface.bulkInsert("conquistas", conquistasNovas, {});
     }
   },
 
   async down(queryInterface, Sequelize) {
-    // A lógica 'down' pode continuar a mesma, apaga tudo
     await queryInterface.bulkDelete("conquistas", null, {});
   },
 };

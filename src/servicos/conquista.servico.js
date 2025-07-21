@@ -51,7 +51,7 @@ exports.verificarEConcederConquistas = async (
 };
 
 exports.calcularProgressoAtual = async (usuarioId, tipoCondicao, conexao) => {
-  const { Compromisso, Contato, Transacao, Setlist, Musica } = conexao.models; // Adicionado Musica para referência
+  const { Compromisso, Contato, Transacao, Setlist, Musica, Usuario, SugestaoMusica } = conexao.models;
   let valorAtual = 0;
 
   switch (tipoCondicao) {
@@ -86,16 +86,34 @@ exports.calcularProgressoAtual = async (usuarioId, tipoCondicao, conexao) => {
     case "PRIMEIRA_DESPESA_EQUIPAMENTO":
       valorAtual = await Transacao.count({ where: { usuario_id: usuarioId, tipo: "despesa", categoria: "Equipamento" } });
       break;
+    
+    // --- NOVOS CASOS ADICIONADOS ---
+    case "ASSINATURA_ATIVA":
+      const userAssinatura = await Usuario.findByPk(usuarioId);
+      valorAtual = userAssinatura && userAssinatura.status_assinatura === 'ativa' ? 1 : 0;
+      break;
+    case "PRIMEIRA_VITRINE_CRIADA":
+      const userVitrine = await Usuario.findByPk(usuarioId);
+      valorAtual = userVitrine && userVitrine.url_unica ? 1 : 0;
+      break;
+    case "CONTAGEM_APLAUSOS":
+      const userAplausos = await Usuario.findByPk(usuarioId);
+      valorAtual = userAplausos ? userAplausos.aplausos : 0;
+      break;
+    case "CONTAGEM_MUSICAS":
+      valorAtual = await Musica.count({ where: { usuario_id: usuarioId } });
+      break;
+    case "SUGESTAO_APROVADA":
+      valorAtual = await SugestaoMusica.count({ where: { usuario_id: usuarioId, status: 'aprovada' } });
+      break;
+
     default:
-      console.warn(
-        `Tipo de condição desconhecido para cálculo de progresso: ${tipoCondicao}`
-      );
+      console.warn(`Tipo de condição desconhecido para cálculo de progresso: ${tipoCondicao}`);
       valorAtual = 0;
   }
   return valorAtual;
 };
 
-// A sua função getTipoProgresso continua excelente e não precisa de alterações
 exports.getTipoProgresso = (conquista) => {
   if (
     conquista.tipo_condicao.includes("PRIMEIRA") ||
