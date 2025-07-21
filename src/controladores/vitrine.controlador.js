@@ -2,15 +2,17 @@
 const { Op } = require("sequelize");
 
 exports.obterVitrine = async (req, res, conexao) => {
-    // Adiciona o modelo Post à desestruturação
     const { Usuario, Compromisso, Contato, Setlist, Musica, UsuarioConquista, Post } = conexao.models;
     const { url_unica } = req.params;
 
     try {
-        // 1. Encontrar o artista pela URL única, incluindo os novos campos
+        // 1. Encontrar o artista pela URL única, incluindo os novos campos de capa e vídeo
         const artista = await Usuario.findOne({
             where: { url_unica },
-            attributes: ['id', 'nome', 'foto_url', 'biografia', 'aplausos', 'links_redes']
+            attributes: [
+                'id', 'nome', 'foto_url', 'biografia', 'aplausos', 'links_redes',
+                'foto_capa_url', 'video_destaque_url' // Campos corrigidos
+            ]
         });
 
         if (!artista) {
@@ -23,7 +25,7 @@ exports.obterVitrine = async (req, res, conexao) => {
                 usuario_id: artista.id,
                 tipo: 'Show',
                 status: 'Agendado',
-                data: { [Op.gte]: new Date() } // Apenas datas futuras
+                data: { [Op.gte]: new Date() }
             },
             attributes: ['nome_evento', 'data', 'local'],
             order: [['data', 'ASC']],
@@ -44,7 +46,7 @@ exports.obterVitrine = async (req, res, conexao) => {
                 model: Musica,
                 as: 'musicas',
                 attributes: ['nome', 'artista'],
-                through: { attributes: [] } // Não incluir dados da tabela de junção
+                through: { attributes: [] }
             }]
         });
 
@@ -88,7 +90,7 @@ exports.obterVitrine = async (req, res, conexao) => {
             setlistPublico,
             musicasPopulares,
             estatisticas,
-            postsRecentes, // Adiciona os posts à resposta
+            postsRecentes,
         };
 
         return res.status(200).json(vitrine);
@@ -109,22 +111,20 @@ exports.registrarAplauso = async (req, res, conexao) => {
             return res.status(404).json({ mensagem: "Artista não encontrado." });
         }
 
-        // Incrementa o contador de aplausos em 1
         const novoTotal = await artista.increment('aplausos', { by: 1 });
 
-        // Retorna o novo total de aplausos
         return res.status(200).json({ aplausos: novoTotal.aplausos });
         
     } catch (erro) {
-        console.error("Erro ao registrar aplauso:", erro);
-        return res.status(500).json({ mensagem: "Não foi possível registrar o aplauso." });
+        console.error("Erro ao registar aplauso:", erro);
+        return res.status(500).json({ mensagem: "Não foi possível registar o aplauso." });
     }
 };
 
 exports.registrarReacaoPost = async (req, res, conexao) => {
     const { Post } = conexao.models;
-    const { id } = req.params; // ID do post
-    const { tipo } = req.body; // 'like' ou 'dislike'
+    const { id } = req.params;
+    const { tipo } = req.body;
 
     if (tipo !== 'like' && tipo !== 'dislike') {
         return res.status(400).json({ mensagem: "Tipo de reação inválido." });
@@ -136,17 +136,16 @@ exports.registrarReacaoPost = async (req, res, conexao) => {
             return res.status(404).json({ mensagem: "Publicação não encontrada." });
         }
 
-        // Incrementa o contador correspondente
         if (tipo === 'like') {
             await post.increment('likes', { by: 1 });
         } else {
             await post.increment('dislikes', { by: 1 });
         }
 
-        return res.status(200).json({ mensagem: "Reação registrada." });
+        return res.status(200).json({ mensagem: "Reação registada." });
         
     } catch (erro) {
-        console.error("Erro ao registrar reação no post:", erro);
-        return res.status(500).json({ mensagem: "Não foi possível registrar a reação." });
+        console.error("Erro ao registar reação no post:", erro);
+        return res.status(500).json({ mensagem: "Não foi possível registar a reação." });
     }
 };

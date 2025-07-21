@@ -27,6 +27,7 @@
     "nodemailer": "^6.9.14",
     "pg": "^8.16.3",
     "react-beautiful-dnd": "^13.1.1",
+    "react-youtube": "^10.1.0",
     "sequelize": "^6.37.7",
     "stripe": "^18.3.0"
   },
