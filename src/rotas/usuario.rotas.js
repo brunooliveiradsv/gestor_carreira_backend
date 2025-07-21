@@ -20,6 +20,7 @@ module.exports = (conexao) => {
 
   // --- Rotas Privadas (exigem autenticação) ---
   roteador.get('/perfil', (req, res) => usuarioControlador.buscarPerfil(req, res, conexao));
+    roteador.put('/perfil/nome', (req, res) => usuarioControlador.atualizarNome(req, res, conexao));
   roteador.put('/perfil/email', (req, res) => usuarioControlador.atualizarEmail(req, res, conexao));
   roteador.put('/perfil/senha', (req, res) => usuarioControlador.atualizarSenha(req, res, conexao));
   roteador.put('/perfil/publico', (req, res) => usuarioControlador.atualizarPerfilPublico(req, res, conexao));

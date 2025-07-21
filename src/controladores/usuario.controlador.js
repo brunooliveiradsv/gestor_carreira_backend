@@ -276,3 +276,30 @@ exports.atualizarFoto = async (req, res, conexao) => {
     return res.status(500).json({ mensagem: "Ocorreu um erro no servidor ao salvar a foto." });
   }
 };
+
+exports.atualizarNome = async (req, res, conexao) => {
+  const { Usuario } = conexao.models;
+  const usuarioId = req.usuario.id;
+  const { nome } = req.body;
+
+  if (!nome) {
+    return res.status(400).json({ mensagem: "O nome é obrigatório." });
+  }
+
+  try {
+    const [updated] = await Usuario.update({ nome }, {
+      where: { id: usuarioId }
+    });
+
+    if (updated) {
+      const usuarioAtualizado = await Usuario.findByPk(usuarioId, { attributes: { exclude: ['senha'] } });
+      logService.registrarAcao(conexao, usuarioId, 'UPDATE_PROFILE_NAME', { new_name: nome });
+      return res.status(200).json(usuarioAtualizado.get({ plain: true }));
+    }
+    
+    return res.status(404).json({ mensagem: "Utilizador não encontrado." });
+  } catch (error) {
+    console.error("Erro ao atualizar o nome:", error);
+    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
+  }
+};
