@@ -1,18 +1,20 @@
 // src/controladores/musica.controlador.js
-const { Op, Sequelize } = require("sequelize");
+const { Op, Sequelize } = require("sequelize"); // Adicione Sequelize para usar as suas funções
 
 exports.listarRepertorioUsuario = async (req, res, conexao) => {
   const { Musica, Tag } = conexao.models;
   const usuarioId = req.usuario.id;
-  const { buscaGeral } = req.query;
+  const { buscaGeral } = req.query; // Agora recebemos um único parâmetro de busca
 
   const whereClause = { usuario_id: usuarioId };
 
+  // Se um termo de busca foi enviado, construímos uma consulta OR complexa
   if (buscaGeral) {
     whereClause[Op.or] = [
       { nome: { [Op.iLike]: `%${buscaGeral}%` } },
       { artista: { [Op.iLike]: `%${buscaGeral}%` } },
       { tom: { [Op.iLike]: `%${buscaGeral}%` } },
+      // Para procurar num campo numérico (bpm), precisamos de o converter para texto
       Sequelize.where(
         Sequelize.cast(Sequelize.col('bpm'), 'TEXT'),
         { [Op.iLike]: `%${buscaGeral}%` }
@@ -55,7 +57,7 @@ exports.listarRepertorioUsuario = async (req, res, conexao) => {
 
   } catch (erro) {
     console.error("Erro ao listar repertório do utilizador:", erro);
-    return res.status(500).json({ mensagem: "Erro ao listar seu repertório." });
+    return res.status(500).json({ mensagem: "Erro ao listar o seu repertório." });
   }
 };
 
@@ -98,7 +100,6 @@ exports.buscarMusicasPublicas = async (req, res, conexao) => {
     }
 };
 
-// --- FUNÇÃO ATUALIZADA ---
 exports.criarManual = async (req, res, conexao) => {
     const { Musica } = conexao.models;
     const { nome, artista, tom, notas_adicionais } = req.body;
@@ -108,11 +109,9 @@ exports.criarManual = async (req, res, conexao) => {
         return res.status(400).json({ mensagem: "Nome e artista são obrigatórios." });
     }
     try {
-        // 1. Verifica se a música já existe (case-insensitive)
         const musicaExistente = await Musica.findOne({
             where: {
                 usuario_id: usuarioId,
-                // Procura onde o nome e o artista são iguais, ignorando maiúsculas/minúsculas
                 [Op.and]: [
                     Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('nome')), Sequelize.fn('LOWER', nome)),
                     Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('artista')), Sequelize.fn('LOWER', artista))
@@ -124,7 +123,6 @@ exports.criarManual = async (req, res, conexao) => {
             return res.status(400).json({ mensagem: "Esta música já existe no seu repertório." });
         }
 
-        // 2. Se não existir, cria a nova música
         const novaMusica = await Musica.create({
             nome, artista, tom, notas_adicionais,
             usuario_id: usuarioId,
@@ -138,7 +136,6 @@ exports.criarManual = async (req, res, conexao) => {
     }
 };
 
-// --- FUNÇÃO ATUALIZADA ---
 exports.importar = async (req, res, conexao) => {
     const { Musica } = conexao.models;
     const { master_id } = req.body;
@@ -149,7 +146,6 @@ exports.importar = async (req, res, conexao) => {
             return res.status(404).json({ mensagem: "Música do banco de dados não encontrada ou não é pública." });
         }
 
-        // 1. Verifica se o utilizador já importou esta música
         const jaImportada = await Musica.findOne({
             where: {
                 usuario_id: usuarioId,
@@ -161,7 +157,6 @@ exports.importar = async (req, res, conexao) => {
             return res.status(400).json({ mensagem: "Esta música já foi importada para o seu repertório." });
         }
         
-        // 2. Se não importou, cria a cópia
         const novaCopia = await Musica.create({
             nome: musicaMestre.nome,
             artista: musicaMestre.artista,
