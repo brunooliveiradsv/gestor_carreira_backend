@@ -4,22 +4,23 @@ const { Op, Sequelize } = require("sequelize");
 exports.listarRepertorioUsuario = async (req, res, conexao) => {
   const { Musica } = conexao.models;
   const usuarioId = req.usuario.id;
-  const { buscaGeral } = req.query;
+  // Voltamos a ler os múltiplos parâmetros de filtro
+  const { termoBusca, artista, tom, bpm } = req.query;
 
   const whereClause = { usuario_id: usuarioId };
-
-  if (buscaGeral) {
-    whereClause[Op.or] = [
-      { nome: { [Op.iLike]: `%${buscaGeral}%` } },
-      { artista: { [Op.iLike]: `%${buscaGeral}%` } },
-      { tom: { [Op.iLike]: `%${buscaGeral}%` } },
-      // --- A CORREÇÃO ESTÁ AQUI ---
-      // Especificamos que queremos a coluna 'bpm' da tabela 'Musica'
-      Sequelize.where(
-        Sequelize.cast(Sequelize.col('Musica.bpm'), 'TEXT'), // Alterado de 'bpm' para 'Musica.bpm'
-        { [Op.iLike]: `%${buscaGeral}%` }
-      )
-    ];
+  
+  // Lógica de busca separada
+  if (termoBusca) {
+    whereClause.nome = { [Op.iLike]: `%${termoBusca}%` };
+  }
+  if (artista) {
+    whereClause.artista = { [Op.iLike]: `%${artista}%` };
+  }
+  if (tom) {
+    whereClause.tom = { [Op.iLike]: tom };
+  }
+  if (bpm) {
+    whereClause.bpm = bpm;
   }
 
   try {
