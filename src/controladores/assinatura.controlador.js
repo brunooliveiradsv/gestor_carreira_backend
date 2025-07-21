@@ -1,5 +1,9 @@
 // src/controladores/assinatura.controlador.js
 
+// --- 1. ESTA LINHA É A CORREÇÃO CRUCIAL ---
+// Ela inicializa o Stripe e torna a variável 'stripe' disponível para todo o ficheiro.
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
 exports.iniciarTesteGratuito = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
@@ -7,7 +11,6 @@ exports.iniciarTesteGratuito = async (req, res, conexao) => {
   try {
     const usuario = await Usuario.findByPk(usuarioId);
 
-    // A lógica de verificação continua a mesma
     if (usuario.status_assinatura !== 'inativa' || usuario.teste_termina_em) {
       return res.status(400).json({ mensagem: "Você não pode iniciar um novo período de teste." });
     }
@@ -15,9 +18,8 @@ exports.iniciarTesteGratuito = async (req, res, conexao) => {
     const dataTermino = new Date();
     dataTermino.setDate(dataTermino.getDate() + 7);
 
-    // CORREÇÃO: O teste agora define o plano como 'premium'
     await usuario.update({
-      plano: 'premium', // O teste dá acesso ao melhor plano
+      plano: 'premium',
       status_assinatura: 'teste',
       teste_termina_em: dataTermino,
     });
@@ -36,20 +38,19 @@ exports.iniciarTesteGratuito = async (req, res, conexao) => {
 };
 
 exports.criarSessaoCheckout = async (req, res, conexao) => {
-  const { plano, planoId } = req.body; // 'planoId' virá do seu painel Stripe
+  const { planoId } = req.body;
   const usuarioId = req.usuario.id;
 
-  // URL para onde o usuário será redirecionado após o pagamento
-  const success_url = `${process.env.FRONTEND_URL}/pagamento-sucesso`;
+  const success_url = `${process.env.FRONTEND_URL}/configuracoes`; // Redireciona para configurações após sucesso
   const cancel_url = `${process.env.FRONTEND_URL}/assinatura`;
 
   try {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      mode: 'subscription', // Importante: define que é uma assinatura
-      client_reference_id: usuarioId, // Guarda o ID do nosso usuário
+      mode: 'subscription',
+      client_reference_id: usuarioId,
       line_items: [{
-        price: planoId, // O ID do preço do plano no Stripe
+        price: planoId,
         quantity: 1,
       }],
       success_url: success_url,
@@ -71,7 +72,6 @@ exports.trocarPlano = async (req, res, conexao) => {
   try {
     const usuario = await Usuario.findByPk(usuarioId);
 
-    // Validações
     if (!usuario) {
       return res.status(404).json({ mensagem: "Usuário não encontrado." });
     }
@@ -85,7 +85,6 @@ exports.trocarPlano = async (req, res, conexao) => {
       return res.status(400).json({ mensagem: "Você já está neste plano." });
     }
 
-    // Atualiza o plano do usuário
     await usuario.update({
       plano: novoPlano
     });
@@ -115,7 +114,6 @@ exports.criarSessaoPortal = async (req, res, conexao) => {
       return res.status(400).json({ mensagem: "Este usuário não possui uma assinatura para gerir." });
     }
 
-    // URL para onde o usuário voltará após sair do portal
     const return_url = `${process.env.FRONTEND_URL}/configuracoes`;
 
     const portalSession = await stripe.billingPortal.sessions.create({
