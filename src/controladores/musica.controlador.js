@@ -5,20 +5,25 @@ const conquistaServico = require('../servicos/conquista.servico');
 exports.listarRepertorioUsuario = async (req, res, conexao) => {
   const { Musica } = conexao.models;
   const usuarioId = req.usuario.id;
-  const { buscaGeral } = req.query;
+  // Agora recebemos múltiplos parâmetros de filtro
+  const { termoBusca, tom, bpm } = req.query;
 
   const whereClause = { usuario_id: usuarioId };
 
-  if (buscaGeral) {
+  // Se um termo de busca principal foi enviado, ele procura no NOME OU no ARTISTA
+  if (termoBusca) {
     whereClause[Op.or] = [
-      { nome: { [Op.iLike]: `%${buscaGeral}%` } },
-      { artista: { [Op.iLike]: `%${buscaGeral}%` } },
-      { tom: { [Op.iLike]: `%${buscaGeral}%` } },
-      Sequelize.where(
-        Sequelize.cast(Sequelize.col('Musica.bpm'), 'TEXT'),
-        { [Op.iLike]: `%${buscaGeral}%` }
-      )
+      { nome: { [Op.iLike]: `%${termoBusca}%` } },
+      { artista: { [Op.iLike]: `%${termoBusca}%` } },
     ];
+  }
+  
+  // Se filtros técnicos foram enviados, eles são adicionados como condições AND
+  if (tom) {
+    whereClause.tom = { [Op.iLike]: `%${tom}%` };
+  }
+  if (bpm) {
+    whereClause.bpm = bpm;
   }
 
   try {
