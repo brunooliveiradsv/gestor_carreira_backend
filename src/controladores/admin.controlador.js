@@ -123,7 +123,7 @@ exports.criarUsuario = async (req, res, conexao) => {
     if (usuarioExistente) {
       return res.status(400).json({ mensagem: "Este e-mail já está em uso." });
     }
-    
+
     const dataTerminoTeste = new Date();
     dataTerminoTeste.setDate(dataTerminoTeste.getDate() + 7);
 
@@ -141,5 +141,44 @@ exports.criarUsuario = async (req, res, conexao) => {
     return res.status(201).json(usuarioSemSenha);
   } catch (erro) {
     return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
+  }
+};
+
+// --- NOVA FUNÇÃO PARA GERENCIAR ASSINATURAS ---
+exports.gerenciarAssinatura = async (req, res, conexao) => {
+  const { Usuario } = conexao.models;
+  const { id } = req.params;
+  const { acao, plano } = req.body; // 'acao' pode ser 'conceder' ou 'remover'
+
+  try {
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) {
+      return res.status(404).json({ mensagem: 'Usuário não encontrado.' });
+    }
+
+    if (acao === 'conceder') {
+      if (!plano || (plano !== 'padrao' && plano !== 'premium')) {
+        return res.status(400).json({ mensagem: 'Plano inválido especificado.' });
+      }
+      usuario.plano = plano;
+      usuario.status_assinatura = 'ativa'; // Ou 'teste' se você quiser conceder um teste específico
+      usuario.teste_termina_em = null; // Remove a data de término de teste se um plano for concedido
+      await usuario.save();
+      return res.status(200).json({ mensagem: `Plano ${plano} concedido com sucesso para ${usuario.nome}.` });
+    } else if (acao === 'remover') {
+      usuario.plano = null;
+      usuario.status_assinatura = 'inativa';
+      usuario.teste_termina_em = null; // Limpa a data de término de teste
+      // TODO: Se você tiver integração com Stripe ou outro serviço de pagamento,
+      // adicione aqui a lógica para cancelar a assinatura nesse serviço.
+      await usuario.save();
+      return res.status(200).json({ mensagem: `Assinatura de ${usuario.nome} removida com sucesso.` });
+    } else {
+      return res.status(400).json({ mensagem: 'Ação de gerenciamento de assinatura inválida.' });
+    }
+
+  } catch (error) {
+    console.error("Erro ao gerenciar assinatura do usuário:", error);
+    return res.status(500).json({ mensagem: "Ocorreu um erro interno ao gerenciar a assinatura.", erro: error.message });
   }
 };
