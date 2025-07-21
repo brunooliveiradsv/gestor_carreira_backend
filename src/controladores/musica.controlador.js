@@ -1,22 +1,22 @@
 // src/controladores/musica.controlador.js
-const { Op, Sequelize } = require("sequelize"); // Adicione Sequelize para usar as suas funções
+const { Op, Sequelize } = require("sequelize");
 
 exports.listarRepertorioUsuario = async (req, res, conexao) => {
-  const { Musica, Tag } = conexao.models;
+  const { Musica } = conexao.models;
   const usuarioId = req.usuario.id;
-  const { buscaGeral } = req.query; // Agora recebemos um único parâmetro de busca
+  const { buscaGeral } = req.query;
 
   const whereClause = { usuario_id: usuarioId };
 
-  // Se um termo de busca foi enviado, construímos uma consulta OR complexa
   if (buscaGeral) {
     whereClause[Op.or] = [
       { nome: { [Op.iLike]: `%${buscaGeral}%` } },
       { artista: { [Op.iLike]: `%${buscaGeral}%` } },
       { tom: { [Op.iLike]: `%${buscaGeral}%` } },
-      // Para procurar num campo numérico (bpm), precisamos de o converter para texto
+      // --- A CORREÇÃO ESTÁ AQUI ---
+      // Especificamos que queremos a coluna 'bpm' da tabela 'Musica'
       Sequelize.where(
-        Sequelize.cast(Sequelize.col('bpm'), 'TEXT'),
+        Sequelize.cast(Sequelize.col('Musica.bpm'), 'TEXT'), // Alterado de 'bpm' para 'Musica.bpm'
         { [Op.iLike]: `%${buscaGeral}%` }
       )
     ];
@@ -203,8 +203,8 @@ exports.apagar = async (req, res, conexao) => {
             return res.status(204).send();
         }
         return res.status(404).json({ mensagem: "Música não encontrada no seu repertório." });
-    } catch (erro) {
-        console.error("Erro ao apagar música:", erro);
+    } catch (error) {
+        console.error("Erro ao apagar música:", error);
         return res.status(500).json({ mensagem: "Erro ao apagar música." });
     }
 };
