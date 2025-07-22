@@ -2,7 +2,7 @@
 const conquistaServico = require("../servicos/conquista.servico");
 
 // A assinatura de todas as funções agora inclui 'next'
-exports.criar = async (req, res, next) => {
+exports.criar = async (req, res, conexao, next) => {
   const { Equipamento, Transacao } = conexao.models;
   const { nome, marca, modelo, tipo, notas, valor_compra, data_compra, gerar_despesa } = req.body;
   const usuarioId = req.usuario.id;
@@ -39,8 +39,7 @@ exports.criar = async (req, res, next) => {
   }
 };
 
-
-exports.listar = async (req, res, next) => {
+exports.listar = async (req, res, conexao, next) => {
   const { Equipamento } = conexao.models;
   const usuarioId = req.usuario.id;
   try {
@@ -54,7 +53,7 @@ exports.listar = async (req, res, next) => {
   }
 };
 
-exports.buscarPorId = async (req, res, next) => {
+exports.buscarPorId = async (req, res, conexao, next) => {
   const { Equipamento } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
@@ -71,7 +70,7 @@ exports.buscarPorId = async (req, res, next) => {
   }
 };
 
-exports.atualizar = async (req, res, next) => {
+exports.atualizar = async (req, res, conexao, next) => {
   const { Equipamento } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
@@ -89,7 +88,7 @@ exports.atualizar = async (req, res, next) => {
   }
 };
 
-exports.apagar = async (req, res, next) => {
+exports.apagar = async (req, res, conexao, next) => {
   const { Equipamento } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
