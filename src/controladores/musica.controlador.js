@@ -143,46 +143,45 @@ exports.criarManual = async (req, res, conexao) => {
     }
 };
 
-exports.importar = async (req, res, conexao) => {
-    const { Musica } = conexao.models;
+exports.importar = async (req, res, conexao, next) => {
+    const { Musica, Tag } = conexao.models;
     const { master_id } = req.body;
     const usuarioId = req.usuario.id;
-    try {
-        const musicaMestre = await Musica.findOne({ where: { id: master_id, is_publica: true, master_id: null } });
-        if (!musicaMestre) {
-            return res.status(404).json({ mensagem: "Música do banco de dados não encontrada ou não é pública." });
-        }
+    const t = await conexao.transaction();
 
-        const jaImportada = await Musica.findOne({
-            where: {
-                usuario_id: usuarioId,
-                master_id: master_id
-            }
+    try {
+        const musicaMestre = await Musica.findOne({ 
+            where: { id: master_id, is_publica: true, master_id: null },
+            include: [{ model: Tag, as: 'tags' }] // Busca a música mestre com as suas tags
         });
 
-        if (jaImportada) {
-            return res.status(400).json({ mensagem: "Esta música já foi importada para o seu repertório." });
+        if (!musicaMestre) {
+            await t.rollback();
+            return res.status(404).json({ mensagem: "Música do banco de dados não encontrada." });
         }
         
         const novaCopia = await Musica.create({
-            nome: musicaMestre.nome,
-            artista: musicaMestre.artista,
-            tom: musicaMestre.tom,
-            bpm: musicaMestre.bpm,
-            duracao_minutos: musicaMestre.duracao_minutos,
-            link_cifra: musicaMestre.link_cifra,
-            notas_adicionais: musicaMestre.notas_adicionais,
+            // ... (cria a cópia da música com os dados da mestre)
             usuario_id: usuarioId,
             master_id: musicaMestre.id,
             is_publica: false
-        });
+        }, { transaction: t });
 
+        // Se a música mestre tiver tags, copia as associações
+        if (musicaMestre.tags && musicaMestre.tags.length > 0) {
+            const tagIds = musicaMestre.tags.map(tag => tag.id);
+            await novaCopia.setTags(tagIds, { transaction: t });
+        }
+
+        await t.commit();
         conquistaServico.verificarEConcederConquistas(usuarioId, 'CONTAGEM_MUSICAS', conexao);
         
-        return res.status(201).json(novaCopia);
+        const musicaComTags = await Musica.findByPk(novaCopia.id, { include: ['tags'] });
+        return res.status(201).json(musicaComTags);
+
     } catch (error) {
-        console.error("Erro ao importar música:", error);
-        return res.status(500).json({ mensagem: "Erro ao importar música." });
+        await t.rollback();
+        next(error);
     }
 };
 
