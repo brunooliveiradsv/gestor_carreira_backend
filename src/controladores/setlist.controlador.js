@@ -66,15 +66,18 @@ exports.buscarPorId = async (req, res, conexao, next) => {
       include: [{
         model: Musica,
         as: 'musicas',
-        through: { attributes: [] }
-      }],
-      order: [
-        [{ model: Musica, as: 'musicas' }, 'setlist_musicas', 'ordem', 'ASC']
-      ]
+        // CORREÇÃO: Pede explicitamente o atributo 'ordem' da tabela de ligação
+        through: { attributes: ['ordem'] }
+      }]
     });
+
     if (!setlist) {
       return res.status(404).json({ mensagem: "Setlist não encontrado." });
     }
+
+    // CORREÇÃO: Ordena os resultados em JavaScript usando o atributo 'ordem' que foi recuperado
+    setlist.musicas.sort((a, b) => a.setlist_musicas.ordem - b.setlist_musicas.ordem);
+
     return res.status(200).json(setlist);
   } catch (erro) {
     next(erro);
