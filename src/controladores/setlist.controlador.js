@@ -3,7 +3,7 @@ const { Op } = require('sequelize');
 const conquistaServico = require('../servicos/conquista.servico');
 const logService = require('../servicos/log.servico');
 
-exports.estatisticas = async (req, res, next) => {
+exports.estatisticas = async (req, res, conexao, next) => {
   const { Musica, Setlist, Compromisso } = conexao.models;
   const usuarioId = req.usuario.id;
   try {
@@ -24,7 +24,7 @@ exports.estatisticas = async (req, res, next) => {
   }
 };
 
-exports.criar = async (req, res, next) => {
+exports.criar = async (req, res, conexao, next) => {
   const { Setlist } = conexao.models;
   const { nome } = req.body;
   const usuarioId = req.usuario.id;
@@ -42,7 +42,7 @@ exports.criar = async (req, res, next) => {
   }
 };
 
-exports.listar = async (req, res, next) => {
+exports.listar = async (req, res, conexao, next) => {
   const { Setlist } = conexao.models;
   const usuarioId = req.usuario.id;
   try {
@@ -56,7 +56,7 @@ exports.listar = async (req, res, next) => {
   }
 };
 
-exports.buscarPorId = async (req, res, next) => {
+exports.buscarPorId = async (req, res, conexao, next) => {
   const { Setlist, Musica } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
@@ -81,7 +81,7 @@ exports.buscarPorId = async (req, res, next) => {
   }
 };
 
-exports.atualizar = async (req, res, next) => {
+exports.atualizar = async (req, res, conexao, next) => {
   const { Setlist } = conexao.models;
   const { id } = req.params;
   const { nome, notas_adicionais } = req.body;
@@ -99,7 +99,7 @@ exports.atualizar = async (req, res, next) => {
   }
 };
 
-exports.apagar = async (req, res, next) => {
+exports.apagar = async (req, res, conexao, next) => {
   const { Setlist } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
@@ -115,7 +115,7 @@ exports.apagar = async (req, res, next) => {
   }
 };
 
-exports.atualizarMusicas = async (req, res, next) => {
+exports.atualizarMusicas = async (req, res, conexao, next) => {
   const { Setlist, SetlistMusica } = conexao.models;
   const { id } = req.params;
   const { musicasIds } = req.body;
@@ -145,7 +145,7 @@ exports.atualizarMusicas = async (req, res, next) => {
   }
 };
 
-exports.sugerirMusicas = async (req, res, next) => {
+exports.sugerirMusicas = async (req, res, conexao, next) => {
   const { Setlist, Musica, Tag } = conexao.models;
   const { id } = req.params;
   const { quantidade = 5 } = req.body;
