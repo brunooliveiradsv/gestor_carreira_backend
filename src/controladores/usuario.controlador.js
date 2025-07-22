@@ -310,6 +310,7 @@ exports.atualizarFoto = async (req, res, conexao) => {
   }
 };
 
+// --- FUNÇÃO ATUALIZADA COM LOG MELHORADO ---
 exports.atualizarFotoCapa = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
@@ -333,7 +334,16 @@ exports.atualizarFotoCapa = async (req, res, conexao) => {
     
     return res.status(404).json({ mensagem: "Utilizador não encontrado." });
   } catch (error) {
+    // --- Log de erro aprimorado ---
     console.error("Erro ao atualizar a foto de capa:", error);
-    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor ao salvar a foto." });
+    // Tenta extrair mais detalhes do erro, especialmente se for do Cloudinary
+    if (error.response && error.response.data) {
+        console.error("Detalhes do erro da resposta:", error.response.data);
+    } else if (error.message) {
+        console.error("Mensagem de erro:", error.message);
+    } else {
+        console.error("Objeto de erro completo:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    }
+    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor ao salvar a foto de capa." });
   }
 };
