@@ -59,14 +59,6 @@ exports.registrar = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const { nome, email, senha } = req.body;
 
-  if (!nome || !email || !senha) {
-    return res.status(400).json({ mensagem: 'Todos os campos são obrigatórios!' });
-  }
-
-  if (senha.length < 8) {
-    return res.status(400).json({ mensagem: "A senha deve ter no mínimo 8 caracteres." });
-  }
-
   try {
     const usuarioExistente = await Usuario.findOne({ where: { email: email } });
     if (usuarioExistente) {
@@ -87,7 +79,7 @@ exports.registrar = async (req, res, conexao) => {
       teste_termina_em: dataTerminoTeste
     });
 
-    const token = jwt.sign({ id: novoUsuario.id }, 'nosso_segredo_super_secreto', { expiresIn: '8h' });
+    const token = jwt.sign({ id: novoUsuario.id }, process.env.JWT_SECRET, { expiresIn: '8h' });
     const { senha: _, ...usuarioParaResposta } = novoUsuario.get({ plain: true });
     
     logService.registrarAcao(conexao, novoUsuario.id, 'USER_REGISTER');
@@ -124,7 +116,7 @@ exports.login = async (req, res, conexao) => {
 
     const token = jwt.sign(
       { id: usuario.id },
-      'nosso_segredo_super_secreto',
+      process.env.JWT_SECRET,
       { expiresIn: '8h' }
     );
 
@@ -179,7 +171,6 @@ exports.recuperarSenha = async (req, res, conexao) => {
     return res.status(500).json({ mensagem: 'Ocorreu um erro interno no servidor.' });
   }
 };
-
 
 exports.buscarPerfil = async (req, res, conexao) => {
   const { senha, ...perfil } = req.usuario.get({ plain: true });
@@ -310,7 +301,6 @@ exports.atualizarFoto = async (req, res, conexao) => {
   }
 };
 
-// --- FUNÇÃO ATUALIZADA COM LOG MELHORADO ---
 exports.atualizarFotoCapa = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
@@ -334,9 +324,7 @@ exports.atualizarFotoCapa = async (req, res, conexao) => {
     
     return res.status(404).json({ mensagem: "Utilizador não encontrado." });
   } catch (error) {
-    // --- Log de erro aprimorado ---
     console.error("Erro ao atualizar a foto de capa:", error);
-    // Tenta extrair mais detalhes do erro, especialmente se for do Cloudinary
     if (error.response && error.response.data) {
         console.error("Detalhes do erro da resposta:", error.response.data);
     } else if (error.message) {
