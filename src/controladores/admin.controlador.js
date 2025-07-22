@@ -57,7 +57,7 @@ exports.apagarUsuario = async (req, res, conexao) => {
 // --- FUNÇÃO PRINCIPAL ATUALIZADA ---
 exports.limparDadosUsuario = async (req, res, conexao) => {
   const {
-    Usuario, // Adicionado para atualizar a vitrine
+    Usuario,
     Compromisso,
     Transacao,
     Contato,
@@ -65,7 +65,9 @@ exports.limparDadosUsuario = async (req, res, conexao) => {
     UsuarioConquista,
     Equipamento,
     Musica,
-    Post
+    Post,
+    ActivityLog, // Adicionado para ser destruído
+    Notificacao // Adicionado para ser destruído
   } = conexao.models;
   const { id } = req.params;
 
@@ -85,17 +87,28 @@ exports.limparDadosUsuario = async (req, res, conexao) => {
     }, { where: { id }, transaction: t });
 
     // Passo 2: Remove a flag 'publico' de todos os contatos e setlists do utilizador
+    // NOTA: Se a intenção é apagar *todos* os dados, Contatos e Setlists abaixo deveriam ser 'destroy'
+    // Se quiser apagar Contatos e Setlists, descomente as linhas e comente as de 'update'
     await Contato.update({ publico: false }, { where: { usuario_id: id }, transaction: t });
     await Setlist.update({ publico: false }, { where: { usuario_id: id }, transaction: t });
 
-    // Passo 3: Apaga os dados transacionais (lógica existente)
+    // Passo 3: Apaga os dados transacionais e relacionados
     await Compromisso.destroy({ where: { usuario_id: id }, transaction: t });
     await Transacao.destroy({ where: { usuario_id: id }, transaction: t });
-    // O Contato e o Setlist não são apagados, apenas desmarcados como públicos
     await UsuarioConquista.destroy({ where: { usuario_id: id }, transaction: t });
     await Equipamento.destroy({ where: { usuario_id: id }, transaction: t });
     await Musica.destroy({ where: { usuario_id: id }, transaction: t });
     await Post.destroy({ where: { user_id: id }, transaction: t });
+
+    // --- ESTAS SÃO AS LINHAS QUE PRECISAM SER ADICIONADAS/VERIFICADAS NO SEU CÓDIGO ---
+    // Elas garantem que ActivityLog e Notificacao sejam apagados.
+    await ActivityLog.destroy({ where: { user_id: id }, transaction: t }); // Garante a deleção dos logs
+    await Notificacao.destroy({ where: { usuario_id: id }, transaction: t }); // Garante a deleção das notificações
+
+    // SugestaoMusica: No modelo (usuario.modelo.js), tem onDelete: 'SET NULL' para usuario_id,
+    // então sugestões feitas por este usuário permaneceriam mas sem vínculo ao autor.
+    // Se quiser apagar as sugestões também, adicione:
+    // await SugestaoMusica.destroy({ where: { usuario_id: id }, transaction: t });
 
     await t.commit();
 
