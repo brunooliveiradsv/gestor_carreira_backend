@@ -87,7 +87,7 @@ exports.registrar = async (req, res, conexao) => {
       teste_termina_em: dataTerminoTeste
     });
 
-    const token = jwt.sign({ id: novoUsuario.id }, 'nosso_segredo_super_secreto', { expiresIn: '8h' });
+    const token = jwt.sign({ id: novoUsuario.id }, process.env.JWT_SECRET, { expiresIn: '8h' });
     const { senha: _, ...usuarioParaResposta } = novoUsuario.get({ plain: true });
     
     logService.registrarAcao(conexao, novoUsuario.id, 'USER_REGISTER');
@@ -124,7 +124,7 @@ exports.login = async (req, res, conexao) => {
 
     const token = jwt.sign(
       { id: usuario.id },
-      'nosso_segredo_super_secreto',
+     process.env.JWT_SECRET,
       { expiresIn: '8h' }
     );
 
