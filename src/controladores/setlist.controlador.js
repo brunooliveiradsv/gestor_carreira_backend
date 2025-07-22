@@ -1,4 +1,3 @@
-
 // src/controladores/setlist.controlador.js
 const { Op } = require('sequelize');
 const conquistaServico = require('../servicos/conquista.servico');
@@ -76,8 +75,11 @@ exports.buscarPorId = async (req, res, conexao, next) => {
       return res.status(404).json({ mensagem: "Setlist não encontrado." });
     }
 
-    // CORREÇÃO: Ordena os resultados em JavaScript usando o atributo 'ordem' que foi recuperado
-    setlist.musicas.sort((a, b) => a.setlist_musicas.ordem - b.setlist_musicas.ordem);
+    // --- AQUI ESTÁ A CORREÇÃO FINAL ---
+    // A propriedade correta é `SetlistMusica` (o nome do modelo da tabela de ligação)
+    if (setlist.musicas && setlist.musicas.length > 0) {
+        setlist.musicas.sort((a, b) => a.SetlistMusica.ordem - b.SetlistMusica.ordem);
+    }
 
     return res.status(200).json(setlist);
   } catch (erro) {
