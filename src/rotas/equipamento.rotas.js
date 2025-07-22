@@ -8,23 +8,22 @@ module.exports = (conexao) => {
 
   roteador.use(authMiddleware(conexao));
 
-  roteador.post("/", (req, res) =>
-    equipamentoControlador.criar(req, res, conexao)
+  // --- ALTERAÇÕES AQUI ---
+  // Adicionamos 'next' e passamo-lo para as funções do controlador
+  roteador.post("/", (req, res, next) =>
+    equipamentoControlador.criar(req, res, conexao, next)
   );
-  roteador.get("/", (req, res) =>
-    equipamentoControlador.listar(req, res, conexao)
+  roteador.get("/", (req, res, next) =>
+    equipamentoControlador.listar(req, res, conexao, next)
   );
-
-  // --- ROTA NOVA ---
-  // Rota para buscar um equipamento específico pelo seu ID
-  roteador.get("/:id", (req, res) =>
-    equipamentoControlador.buscarPorId(req, res, conexao)
+  roteador.get("/:id", (req, res, next) =>
+    equipamentoControlador.buscarPorId(req, res, conexao, next)
   );
-  roteador.put("/:id", (req, res) =>
-    equipamentoControlador.atualizar(req, res, conexao)
+  roteador.put("/:id", (req, res, next) =>
+    equipamentoControlador.atualizar(req, res, conexao, next)
   );
-  roteador.delete("/:id", (req, res) =>
-    equipamentoControlador.apagar(req, res, conexao)
+  roteador.delete("/:id", (req, res, next) =>
+    equipamentoControlador.apagar(req, res, conexao, next)
   );
 
   return roteador;
