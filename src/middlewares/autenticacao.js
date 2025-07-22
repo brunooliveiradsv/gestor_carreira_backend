@@ -14,7 +14,7 @@ module.exports = (conexao) => {
     const [, token] = authHeader.split(' ');
 
     try {
-      const decodificado = jwt.verify(token, 'nosso_segredo_super_secreto');
+      const decodificado = jwt.verify(token, process.env.JWT_SECRET,);
       const idDoUsuario = decodificado.id;
 
       // Agora o middleware tem acesso à conexão para buscar o usuário
