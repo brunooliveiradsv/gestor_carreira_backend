@@ -66,7 +66,6 @@ exports.buscarPorId = async (req, res, conexao, next) => {
       include: [{
         model: Musica,
         as: 'musicas',
-        // CORREÇÃO: Pede explicitamente o atributo 'ordem' da tabela de ligação
         through: { attributes: ['ordem'] }
       }]
     });
@@ -76,9 +75,9 @@ exports.buscarPorId = async (req, res, conexao, next) => {
     }
 
     // --- AQUI ESTÁ A CORREÇÃO FINAL ---
-    // A propriedade correta é 'setlist_musicas' (o nome da tabela de ligação)
+    // A propriedade correta é `SetlistMusica` (o nome do modelo da tabela de ligação), e não `setlist_musicas`.
     if (setlist.musicas && setlist.musicas.length > 0) {
-        setlist.musicas.sort((a, b) => a.setlist_musicas.ordem - b.setlist_musicas.ordem);
+        setlist.musicas.sort((a, b) => a.SetlistMusica.ordem - b.SetlistMusica.ordem);
     }
 
     return res.status(200).json(setlist);
