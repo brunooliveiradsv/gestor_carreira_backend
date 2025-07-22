@@ -1,7 +1,7 @@
 // src/controladores/setlist.controlador.js
 const { Op } = require('sequelize');
 const conquistaServico = require('../servicos/conquista.servico');
-const logService = require('../servicos/log.servico'); // Importa o serviço de log
+const logService = require('../servicos/log.servico');
 
 // --- FUNÇÕES DO DASHBOARD ---
 
@@ -49,7 +49,6 @@ exports.criar = async (req, res, conexao) => {
   try {
     const novoSetlist = await Setlist.create({ nome, usuario_id: usuarioId });
     
-    // Regista a ação no log
     logService.registrarAcao(conexao, usuarioId, 'CREATE_SETLIST', { setlistId: novoSetlist.id, setlistName: novoSetlist.nome });
     
     conquistaServico.verificarEConcederConquistas(usuarioId, 'CONTAGEM_REPERTORIOS', conexao);
@@ -86,15 +85,17 @@ exports.buscarPorId = async (req, res, conexao) => {
       include: [{
         model: Musica,
         as: 'musicas',
-        through: { attributes: ['ordem'] }
-      }]
+        through: { attributes: [] }
+      }],
+      // CORREÇÃO: Adicionada a cláusula 'order' para ordenar pela coluna 'ordem' da tabela de ligação.
+      order: [
+        [{ model: Musica, as: 'musicas' }, 'setlist_musicas', 'ordem', 'ASC']
+      ]
     });
 
     if (!setlist) {
       return res.status(404).json({ mensagem: "Setlist não encontrado." });
     }
-
-    setlist.musicas.sort((a, b) => a.setlist_musicas.ordem - b.setlist_musicas.ordem);
 
     return res.status(200).json(setlist);
   } catch (erro) {
@@ -129,7 +130,6 @@ exports.apagar = async (req, res, conexao) => {
   try {
     const deletado = await Setlist.destroy({ where: { id, usuario_id: usuarioId } });
     if (deletado) {
-      // Regista a ação no log
       logService.registrarAcao(conexao, usuarioId, 'DELETE_SETLIST', { setlistId: id });
       return res.status(204).send();
     }
