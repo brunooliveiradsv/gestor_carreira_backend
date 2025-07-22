@@ -10,10 +10,17 @@ class SetlistMusica extends Model {
     }, { 
       sequelize, 
       tableName: 'setlist_musicas', 
-      timestamps: true, // Sequelize gerencia 'created_at' e 'updated_at'
+      timestamps: true,
       createdAt: 'created_at',
       updatedAt: 'updated_at',
     })
+  }
+
+  // --- ADICIONADO AQUI ---
+  // Define as associações deste modelo de ligação
+  static associate(models) {
+    this.belongsTo(models.Setlist, { foreignKey: 'setlist_id', as: 'setlist' });
+    this.belongsTo(models.Musica, { foreignKey: 'musica_id', as: 'musica' });
   }
 }
 

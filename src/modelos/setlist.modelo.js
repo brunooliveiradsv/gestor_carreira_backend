@@ -7,7 +7,7 @@ class Setlist extends Model {
       nome: DataTypes.STRING,
       link_cifraclub: DataTypes.STRING,
       notas_adicionais: DataTypes.TEXT,
-      publico: DataTypes.BOOLEAN, // <-- NOVO
+      publico: DataTypes.BOOLEAN,
     }, {
       sequelize,
       tableName: 'setlists'
@@ -18,9 +18,10 @@ class Setlist extends Model {
     this.belongsTo(models.Usuario, { foreignKey: 'usuario_id', as: 'usuario' });
     this.hasMany(models.Compromisso, { foreignKey: 'setlist_id', as: 'compromissos' });
     
-    // Nova associação com Musica
+    // --- ALTERAÇÃO AQUI ---
+    // Agora usamos o modelo 'SetlistMusica' em vez de uma string
     this.belongsToMany(models.Musica, { 
-      through: 'setlist_musicas', // Nome da tabela de ligação
+      through: models.SetlistMusica, // Alterado de 'setlist_musicas'
       foreignKey: 'setlist_id', 
       as: 'musicas' 
     });

@@ -66,20 +66,19 @@ exports.buscarPorId = async (req, res, conexao, next) => {
       include: [{
         model: Musica,
         as: 'musicas',
-        // Pede explicitamente o atributo 'ordem' da tabela de ligação
         through: { attributes: ['ordem'] }
       }]
-      // A cláusula 'order' foi removida para evitar o erro de SQL
     });
 
     if (!setlist) {
       return res.status(404).json({ mensagem: "Setlist não encontrado." });
     }
 
-    // --- AQUI ESTÁ A CORREÇÃO FINAL ---
-    // A propriedade correta, como visto no log, é `setlist_musicas`.
+    // --- A CORREÇÃO FINAL E DEFINITIVA ---
+    // Com as associações de modelo corrigidas, esta propriedade agora existirá
+    // e a ordenação em JavaScript funcionará corretamente.
     if (setlist.musicas && setlist.musicas.length > 0) {
-        setlist.musicas.sort((a, b) => a.setlist_musicas.ordem - b.setlist_musicas.ordem);
+        setlist.musicas.sort((a, b) => a.SetlistMusica.ordem - b.SetlistMusica.ordem);
     }
 
     return res.status(200).json(setlist);
@@ -87,6 +86,7 @@ exports.buscarPorId = async (req, res, conexao, next) => {
     next(erro);
   }
 };
+
 
 exports.atualizar = async (req, res, conexao, next) => {
   const { Setlist } = conexao.models;
