@@ -66,19 +66,20 @@ exports.buscarPorId = async (req, res, conexao, next) => {
       include: [{
         model: Musica,
         as: 'musicas',
-        // CORREÇÃO: Pede explicitamente o atributo 'ordem' da tabela de ligação
+        // Pede explicitamente o atributo 'ordem' da tabela de ligação
         through: { attributes: ['ordem'] }
-      }],
-      // --- AQUI ESTÁ A CORREÇÃO FINAL ---
-      // Esta nova sintaxe força o Sequelize a ordenar as músicas
-      // pela coluna 'ordem' da tabela de ligação 'setlist_musicas'
-      order: [
-        [{ model: Musica, as: 'musicas' }, 'setlist_musicas', 'ordem', 'ASC']
-      ]
+      }]
+      // A cláusula 'order' foi removida para evitar o erro de SQL
     });
 
     if (!setlist) {
       return res.status(404).json({ mensagem: "Setlist não encontrado." });
+    }
+
+    // --- AQUI ESTÁ A CORREÇÃO FINAL ---
+    // A propriedade correta, como visto no log, é `setlist_musicas`.
+    if (setlist.musicas && setlist.musicas.length > 0) {
+        setlist.musicas.sort((a, b) => a.setlist_musicas.ordem - b.setlist_musicas.ordem);
     }
 
     return res.status(200).json(setlist);
