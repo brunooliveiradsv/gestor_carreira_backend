@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const conexao = require("./src/database");
 const cors = require("cors");
+const tratadorDeErros = require('./src/middlewares/tratadorDeErros'); // IMPORTADO
 
 const app = express();
 
@@ -14,11 +15,10 @@ if (!fs.existsSync(diretorioDeUploads)) {
   console.log(`✅ Diretório de uploads criado em: ${diretorioDeUploads}`);
 }
 
-// Adicione a URL do seu frontend de produção à lista de origens permitidas
 const corsOptions = {
  origin: [
-    'https://voxgest.vercel.app', // O seu URL de produção
-    'http://localhost:5173'      // O seu ambiente de desenvolvimento local
+    'https://voxgest.vercel.app',
+    'http://localhost:5173'
 ],
   optionsSuccessStatus: 200
 };
@@ -57,14 +57,17 @@ app.use('/api/conquistas', conquistaRotas(conexao));
 app.use("/api/admin", adminRotas(conexao));
 app.use('/api/notificacoes', notificacaoRotas(conexao));
 app.use('/api/equipamentos', equipamentoRotas(conexao));
-app.use("/api/musicas", musicaRotas(conexao)); // Agora inclui a rota de sugestão
+app.use("/api/musicas", musicaRotas(conexao));
 app.use("/api/tags", tagRotas(conexao));
 app.use("/api/vitrine", vitrineRotas(conexao));
 app.use("/api/admin/musicas", musicaMestreRotas(conexao));
-app.use("/api/admin/logs", logRotas(conexao)); //
-app.use("/api/posts", postRotas(conexao)); // Rota para posts 
-app.use("/api/assinatura", assinaturaRotas(conexao)); // Rota para assinatura
-app.use("/webhook", webhookRotas(conexao)); // Rota para webhooks do Stripe
+app.use("/api/admin/logs", logRotas(conexao));
+app.use("/api/posts", postRotas(conexao));
+app.use("/api/assinatura", assinaturaRotas(conexao));
+app.use("/webhook", webhookRotas(conexao));
+
+// ADICIONADO: Middleware de tratamento de erros deve ser o ÚLTIMO
+app.use(tratadorDeErros);
 
 const PORTA = process.env.PORT || 3000;
 

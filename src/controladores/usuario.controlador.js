@@ -6,7 +6,7 @@ const emailServico = require('../servicos/email.servico');
 const logService = require('../servicos/log.servico');
 const conquistaServico = require('../servicos/conquista.servico');
 
-exports.atualizarPerfilPublico = async (req, res, conexao) => {
+exports.atualizarPerfilPublico = async (req, res, next) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
   const { biografia, url_unica, links_redes, video_destaque_url } = req.body;
@@ -50,12 +50,11 @@ exports.atualizarPerfilPublico = async (req, res, conexao) => {
     
     return res.status(404).json({ mensagem: "Usuário não encontrado." });
   } catch (error) {
-    console.error("Erro ao atualizar perfil público:", error);
-    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
+    next(error);
   }
 };
 
-exports.registrar = async (req, res, conexao) => {
+exports.registrar = async (req, res, next) => {
   const { Usuario } = conexao.models;
   const { nome, email, senha } = req.body;
 
@@ -91,12 +90,11 @@ exports.registrar = async (req, res, conexao) => {
     });
 
   } catch (erro) {
-    console.error("Erro no registo:", erro); 
-    res.status(500).json({ mensagem: 'Ocorreu um erro no servidor.' });
+    next(erro);
   }
 };
 
-exports.login = async (req, res, conexao) => {
+exports.login = async (req, res, next) => {
   const { Usuario } = conexao.models;
   const { email, senha } = req.body;
 
@@ -116,7 +114,7 @@ exports.login = async (req, res, conexao) => {
 
     const token = jwt.sign(
       { id: usuario.id },
-      'nosso_segredo_super_secreto',
+      process.env.JWT_SECRET,
       { expiresIn: '8h' }
     );
 
@@ -131,12 +129,11 @@ exports.login = async (req, res, conexao) => {
     });
 
   } catch (erro) {
-    console.error("Erro no login:", erro);
-    res.status(500).json({ mensagem: 'Ocorreu um erro no servidor ao fazer login.' });
+    next(erro);
   }
 };
 
-exports.recuperarSenha = async (req, res, conexao) => {
+exports.recuperarSenha = async (req, res, next) => {
   const { Usuario } = conexao.models;
   const { email } = req.body;
 
@@ -167,17 +164,16 @@ exports.recuperarSenha = async (req, res, conexao) => {
     return res.status(200).json({ mensagem: 'Se um usuário com este e-mail existir, um e-mail de recuperação foi enviado.' });
 
   } catch (erro) {
-    console.error("Erro no processo de recuperação de senha:", erro);
-    return res.status(500).json({ mensagem: 'Ocorreu um erro interno no servidor.' });
+    next(erro);
   }
 };
 
-exports.buscarPerfil = async (req, res, conexao) => {
+exports.buscarPerfil = async (req, res, next) => {
   const { senha, ...perfil } = req.usuario.get({ plain: true });
   return res.status(200).json(perfil);
 };
 
-exports.atualizarNome = async (req, res, conexao) => {
+exports.atualizarNome = async (req, res, next) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
   const { nome } = req.body;
@@ -199,12 +195,11 @@ exports.atualizarNome = async (req, res, conexao) => {
     
     return res.status(404).json({ mensagem: "Utilizador não encontrado." });
   } catch (error) {
-    console.error("Erro ao atualizar o nome:", error);
-    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
+    next(error);
   }
 };
 
-exports.atualizarEmail = async (req, res, conexao) => {
+exports.atualizarEmail = async (req, res, next) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
   const { email } = req.body;
@@ -230,12 +225,11 @@ exports.atualizarEmail = async (req, res, conexao) => {
     return res.status(404).json({ mensagem: "Usuário não encontrado." });
 
   } catch (error) {
-    console.error("Erro ao atualizar e-mail:", error);
-    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
+    next(error);
   }
 };
 
-exports.atualizarSenha = async (req, res, conexao) => {
+exports.atualizarSenha = async (req, res, next) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
   const { senhaAtual, novaSenha } = req.body;
@@ -267,12 +261,11 @@ exports.atualizarSenha = async (req, res, conexao) => {
     return res.status(200).json({ mensagem: "Senha atualizada com sucesso!" });
 
   } catch (error) {
-    console.error("Erro ao atualizar senha:", error);
-    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
+    next(error);
   }
 };
 
-exports.atualizarFoto = async (req, res, conexao) => {
+exports.atualizarFoto = async (req, res, next) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
 
@@ -296,12 +289,11 @@ exports.atualizarFoto = async (req, res, conexao) => {
     
     return res.status(404).json({ mensagem: "Utilizador não encontrado." });
   } catch (error) {
-    console.error("Erro ao atualizar a foto de perfil:", error);
-    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor ao salvar a foto." });
+    next(error);
   }
 };
 
-exports.atualizarFotoCapa = async (req, res, conexao) => {
+exports.atualizarFotoCapa = async (req, res, next) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
 
@@ -324,14 +316,6 @@ exports.atualizarFotoCapa = async (req, res, conexao) => {
     
     return res.status(404).json({ mensagem: "Utilizador não encontrado." });
   } catch (error) {
-    console.error("Erro ao atualizar a foto de capa:", error);
-    if (error.response && error.response.data) {
-        console.error("Detalhes do erro da resposta:", error.response.data);
-    } else if (error.message) {
-        console.error("Mensagem de erro:", error.message);
-    } else {
-        console.error("Objeto de erro completo:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
-    }
-    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor ao salvar a foto de capa." });
+    next(error);
   }
 };

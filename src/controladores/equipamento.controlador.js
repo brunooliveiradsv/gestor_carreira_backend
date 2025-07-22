@@ -1,25 +1,22 @@
 // src/controladores/equipamento.controlador.js
 const conquistaServico = require("../servicos/conquista.servico");
 
-exports.criar = async (req, res, conexao) => {
+exports.criar = async (req, res, next) => { // Adicionado 'next'
   const { Equipamento, Transacao } = conexao.models;
   const { nome, marca, modelo, tipo, notas, valor_compra, data_compra, gerar_despesa } = req.body;
   const usuarioId = req.usuario.id;
 
-  // Garante que se o valor for vazio, ele seja salvo como nulo
   const cacheParaSalvar = (valor_compra === '' || valor_compra === null) ? null : valor_compra;
   const t = await conexao.transaction();
 
   try {
     const novoEquipamento = await Equipamento.create({
       nome, marca, modelo, tipo, notas, 
-      valor_compra: cacheParaSalvar, // Salva o valor tratado
+      valor_compra: cacheParaSalvar,
       data_compra, 
       usuario_id: usuarioId,
     }, { transaction: t });
 
-    // --- CONDIÇÃO CORRIGIDA ---
-    // Agora só tenta analisar o valor se ele existir
     if (gerar_despesa && cacheParaSalvar && parseFloat(cacheParaSalvar) > 0) {
       await Transacao.create({
         usuario_id: usuarioId,
@@ -37,13 +34,12 @@ exports.criar = async (req, res, conexao) => {
 
   } catch (erro) {
     await t.rollback();
-    console.error("Erro ao criar equipamento:", erro);
-    return res.status(400).json({ mensagem: "Erro ao criar equipamento." });
+    next(erro); // <-- ALTERADO AQUI
   }
 };
 
 
-exports.listar = async (req, res, conexao) => {
+exports.listar = async (req, res, next) => { // Adicionado 'next'
   const { Equipamento } = conexao.models;
   const usuarioId = req.usuario.id;
   try {
@@ -53,12 +49,11 @@ exports.listar = async (req, res, conexao) => {
     });
     return res.status(200).json(equipamentos);
   } catch (erro) {
-    console.error("Erro ao listar equipamentos:", erro);
-    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
+    next(erro); // <-- ALTERADO AQUI
   }
 };
 
-exports.buscarPorId = async (req, res, conexao) => {
+exports.buscarPorId = async (req, res, next) => { // Adicionado 'next'
   const { Equipamento } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
@@ -71,12 +66,11 @@ exports.buscarPorId = async (req, res, conexao) => {
     }
     return res.status(200).json(equipamento);
   } catch (erro) {
-    console.error("Erro ao buscar equipamento:", erro);
-    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
+    next(erro); // <-- ALTERADO AQUI
   }
 };
 
-exports.atualizar = async (req, res, conexao) => {
+exports.atualizar = async (req, res, next) => { // Adicionado 'next'
   const { Equipamento } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
@@ -90,12 +84,11 @@ exports.atualizar = async (req, res, conexao) => {
     }
     return res.status(404).json({ mensagem: "Equipamento não encontrado." });
   } catch (erro) {
-    console.error("Erro ao atualizar equipamento:", erro);
-    return res.status(400).json({ mensagem: "Erro ao atualizar equipamento." });
+    next(erro); // <-- ALTERADO AQUI
   }
 };
 
-exports.apagar = async (req, res, conexao) => {
+exports.apagar = async (req, res, next) => { // Adicionado 'next'
   const { Equipamento } = conexao.models;
   const { id } = req.params;
   const usuarioId = req.usuario.id;
@@ -108,7 +101,6 @@ exports.apagar = async (req, res, conexao) => {
     }
     return res.status(404).json({ mensagem: "Equipamento não encontrado." });
   } catch (erro) {
-    console.error("Erro ao apagar equipamento:", erro);
-    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
+    next(erro); // <-- ALTERADO AQUI
   }
 };
