@@ -20,8 +20,15 @@ const storage = new CloudinaryStorage({
     
     return {
       folder: 'voxgest_profile_pictures', // Nome da pasta no Cloudinary
-      format: 'png', // Converte a imagem para png
+      // Remova ou ajuste 'format' se você não quiser forçar PNG para todas as imagens
+      // format: 'png', 
       public_id: filename,
+      // --- NOVA LINHA PARA REDIMENSIONAMENTO ---
+      transformation: [
+        { width: 1200, height: 600, crop: "limit" } // Exemplo: redimensiona para caber em 1200x600 pixels
+        // Você pode adicionar mais transformações aqui, por exemplo, para crop ou qualidade:
+        // { quality: "auto:eco" }
+      ],
     };
   },
 });
