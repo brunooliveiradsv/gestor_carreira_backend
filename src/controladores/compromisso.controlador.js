@@ -181,3 +181,31 @@ exports.proximos = async (req, res, conexao) => {
     return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
   }
 };
+
+exports.gerarContrato = async (req, res, conexao, next) => {
+    const { Compromisso } = conexao.models;
+    const { id } = req.params;
+    const usuarioId = req.usuario.id;
+    const dadosContratante = req.body; // { nome, nif, morada }
+
+    if (!dadosContratante.nome || !dadosContratante.nif || !dadosContratante.morada) {
+        return res.status(400).json({ mensagem: 'Todos os dados do contratante são obrigatórios.' });
+    }
+
+    try {
+        const compromisso = await Compromisso.findOne({ where: { id, usuario_id: usuarioId } });
+        if (!compromisso) {
+            return res.status(404).json({ mensagem: 'Compromisso não encontrado.' });
+        }
+
+        // Define o nome do ficheiro e os cabeçalhos para o browser fazer o download
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=contrato_${compromisso.nome_evento.replace(/\s+/g, '_')}.pdf`);
+
+        // Chama o serviço para gerar o PDF e envia-o como resposta
+        contratoServico.gerarContratoPDF(compromisso, dadosContratante, req.usuario, res);
+
+    } catch (error) {
+        next(error);
+    }
+};
