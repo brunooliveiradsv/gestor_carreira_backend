@@ -293,26 +293,38 @@ exports.atualizarFoto = async (req, res, conexao, next) => {
   }
 };
 
-exports.atualizarFotosCapa = async (req, res, conexao, next) => {
+exports.atualizarFotosCapa = async (req, res, next) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
   
-  const { linksCapa } = req.body; 
+  // Recebe um array que representa a ordem final das imagens
+  const { ordemCapas } = req.body; 
   const ficheiros = req.files;
+  let uploadIndex = 0;
 
   try {
     let urlsFinais = [];
 
-    if (linksCapa) {
-      const links = Array.isArray(linksCapa) ? linksCapa : [linksCapa];
-      urlsFinais.push(...links.filter(link => typeof link === 'string' && link.startsWith('http')));
+    if (ordemCapas && Array.isArray(ordemCapas)) {
+      urlsFinais = ordemCapas.map(item => {
+        // Se o item for um placeholder 'UPLOAD', substitui pelo link do ficheiro correspondente
+        if (item === 'UPLOAD') {
+          if (ficheiros && ficheiros[uploadIndex]) {
+            const url = ficheiros[uploadIndex].path;
+            uploadIndex++;
+            return url;
+          }
+          return null; // Caso de segurança
+        }
+        // Se for um link http, mantém o link
+        if (typeof item === 'string' && item.startsWith('http')) {
+          return item;
+        }
+        return null;
+      }).filter(url => url !== null); // Remove quaisquer itens nulos
     }
 
-    if (ficheiros && ficheiros.length > 0) {
-      const urlsDosUploads = ficheiros.map(file => file.path);
-      urlsFinais.push(...urlsDosUploads);
-    }
-
+    // Limita a um máximo de 3 imagens
     urlsFinais = urlsFinais.slice(0, 3);
 
     await Usuario.update({ foto_capa_url: urlsFinais }, {
