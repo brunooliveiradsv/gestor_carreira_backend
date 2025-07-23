@@ -16,7 +16,6 @@ class SetlistMusica extends Model {
     })
   }
 
-  // --- ADICIONADO AQUI ---
   // Define as associações deste modelo de ligação
   static associate(models) {
     this.belongsTo(models.Setlist, { foreignKey: 'setlist_id', as: 'setlist' });

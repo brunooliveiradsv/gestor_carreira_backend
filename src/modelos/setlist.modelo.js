@@ -18,9 +18,7 @@ class Setlist extends Model {
     this.belongsTo(models.Usuario, { foreignKey: 'usuario_id', as: 'usuario' });
     this.hasMany(models.Compromisso, { foreignKey: 'setlist_id', as: 'compromissos' });
     
-    // --- ALTERAÇÃO AQUI ---
-    // Agora usamos o modelo 'SetlistMusica' para definir a relação,
-    // o que é mais robusto do que usar uma string com o nome da tabela.
+    // Agora usamos o modelo 'SetlistMusica' para definir a relação
     this.belongsToMany(models.Musica, { 
       through: models.SetlistMusica,
       foreignKey: 'setlist_id', 

@@ -67,16 +67,17 @@ exports.buscarPorId = async (req, res, conexao, next) => {
       include: [{
         model: Musica,
         as: 'musicas',
-        through: { attributes: ['ordem'] }
-      }]
+        through: { attributes: [] }
+      }],
+      // --- CORREÇÃO FINAL APLICADA AQUI ---
+      // Esta sintaxe ordena pela coluna 'ordem' da tabela de ligação
+      order: [
+        [{ model: Musica, as: 'musicas' }, 'SetlistMusica', 'ordem', 'ASC']
+      ]
     });
 
     if (!setlist) {
       return res.status(404).json({ mensagem: "Setlist não encontrado." });
-    }
-
-    if (setlist.musicas && setlist.musicas.length > 0) {
-        setlist.musicas.sort((a, b) => a.setlist_musicas.ordem - b.setlist_musicas.ordem);
     }
 
     return res.status(200).json(setlist);
@@ -226,13 +227,17 @@ exports.buscarPublicoPorUuid = async (req, res, conexao, next) => {
           model: Musica,
           as: 'musicas',
           attributes: ['nome', 'artista'],
-          through: { attributes: ['ordem'] }
+          through: { attributes: [] }
         },
         {
           model: Usuario,
           as: 'usuario',
           attributes: ['nome']
         }
+      ],
+      // --- CORREÇÃO FINAL APLICADA AQUI TAMBÉM ---
+      order: [
+        [{ model: Musica, as: 'musicas' }, 'SetlistMusica', 'ordem', 'ASC']
       ]
     });
 
@@ -240,10 +245,6 @@ exports.buscarPublicoPorUuid = async (req, res, conexao, next) => {
       return res.status(404).json({ mensagem: "Setlist público não encontrado." });
     }
     
-    if (setlist.musicas && setlist.musicas.length > 0) {
-        setlist.musicas.sort((a, b) => a.setlist_musicas.ordem - b.setlist_musicas.ordem);
-    }
-
     return res.status(200).json(setlist);
   } catch (erro) {
     next(erro);
