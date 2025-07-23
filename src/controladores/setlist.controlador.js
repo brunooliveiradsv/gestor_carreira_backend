@@ -75,11 +75,8 @@ exports.buscarPorId = async (req, res, conexao, next) => {
       return res.status(404).json({ mensagem: "Setlist não encontrado." });
     }
 
-    // --- A CORREÇÃO FINAL E DEFINITIVA ---
-    // Com as associações de modelo corrigidas, esta propriedade agora existirá
-    // e a ordenação em JavaScript funcionará corretamente.
     if (setlist.musicas && setlist.musicas.length > 0) {
-        setlist.musicas.sort((a, b) => a.SetlistMusica.ordem - b.SetlistMusica.ordem);
+        setlist.musicas.sort((a, b) => a.setlist_musicas.ordem - b.setlist_musicas.ordem);
     }
 
     return res.status(200).json(setlist);
@@ -232,26 +229,29 @@ exports.buscarPublicoPorUuid = async (req, res, conexao, next) => {
         {
           model: Musica,
           as: 'musicas',
-          attributes: ['nome', 'artista'], // Apenas os dados públicos da música
-          through: { attributes: [] }
+          attributes: ['nome', 'artista'],
+          through: { attributes: ['ordem'] } // Pede o atributo 'ordem'
         },
         {
           model: Usuario,
           as: 'usuario',
-          attributes: ['nome'] // Para mostrar o nome do artista
+          attributes: ['nome']
         }
-      ],
-      order: [
-        ['musicas', 'setlist_musicas', 'ordem', 'ASC']
       ]
+      // A cláusula 'order' que causava o erro foi removida
     });
 
     if (!setlist) {
       return res.status(404).json({ mensagem: "Setlist público não encontrado." });
     }
 
+    // Ordena as músicas em JavaScript, da mesma forma que na função 'buscarPorId'
+    if (setlist.musicas && setlist.musicas.length > 0) {
+        setlist.musicas.sort((a, b) => a.setlist_musicas.ordem - b.setlist_musicas.ordem);
+    }
+
     return res.status(200).json(setlist);
   } catch (erro) {
     next(erro);
-  }a
+  }
 };
