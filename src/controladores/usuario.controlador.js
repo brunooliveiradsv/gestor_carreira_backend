@@ -6,7 +6,6 @@ const emailServico = require('../servicos/email.servico');
 const logService = require('../servicos/log.servico');
 const conquistaServico = require('../servicos/conquista.servico');
 
-// CORREÇÃO: A assinatura de todas as funções agora inclui 'conexao' e 'next'
 exports.atualizarPerfilPublico = async (req, res, conexao, next) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
@@ -294,32 +293,26 @@ exports.atualizarFoto = async (req, res, conexao, next) => {
   }
 };
 
-exports.atualizarFotosCapa = async (req, res, next) => {
+exports.atualizarFotosCapa = async (req, res, conexao, next) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
   
-  // Recebe os links de imagens hospedadas
   const { linksCapa } = req.body; 
-  // Recebe os ficheiros que foram enviados
   const ficheiros = req.files;
 
   try {
     let urlsFinais = [];
 
-    // Processa os links de imagens existentes
     if (linksCapa) {
-      // Garante que é um array
       const links = Array.isArray(linksCapa) ? linksCapa : [linksCapa];
       urlsFinais.push(...links.filter(link => typeof link === 'string' && link.startsWith('http')));
     }
 
-    // Processa os novos ficheiros enviados
     if (ficheiros && ficheiros.length > 0) {
       const urlsDosUploads = ficheiros.map(file => file.path);
       urlsFinais.push(...urlsDosUploads);
     }
 
-    // Limita a um máximo de 3 imagens
     urlsFinais = urlsFinais.slice(0, 3);
 
     await Usuario.update({ foto_capa_url: urlsFinais }, {
