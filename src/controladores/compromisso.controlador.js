@@ -187,10 +187,12 @@ exports.gerarContrato = async (req, res, conexao, next) => {
     const { Compromisso } = conexao.models;
     const { id } = req.params;
     const usuarioId = req.usuario.id;
-    const dadosContratante = req.body; // { nome, nif, morada }
+    // --- RECEBE OS NOVOS CAMPOS ---
+    const dadosContratante = req.body; 
 
-    if (!dadosContratante.nome || !dadosContratante.nif || !dadosContratante.morada) {
-        return res.status(400).json({ mensagem: 'Todos os dados do contratante são obrigatórios.' });
+    // Validação melhorada
+    if (!dadosContratante.nome || !dadosContratante.nif || !dadosContratante.morada || !dadosContratante.forma_pagamento || !dadosContratante.cidade_foro || !dadosContratante.estado_foro) {
+        return res.status(400).json({ mensagem: 'Todos os campos do contrato são obrigatórios.' });
     }
 
     try {
@@ -199,11 +201,10 @@ exports.gerarContrato = async (req, res, conexao, next) => {
             return res.status(404).json({ mensagem: 'Compromisso não encontrado.' });
         }
 
-        // Define o nome do ficheiro e os cabeçalhos para o browser fazer o download
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=contrato_${compromisso.nome_evento.replace(/\s+/g, '_')}.pdf`);
 
-        // Chama o serviço para gerar o PDF e envia-o como resposta
+        // Agora passa o objeto completo para o serviço
         contratoServico.gerarContratoPDF(compromisso, dadosContratante, req.usuario, res);
 
     } catch (error) {
