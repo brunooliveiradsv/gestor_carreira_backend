@@ -67,21 +67,18 @@ exports.buscarPorId = async (req, res, conexao, next) => {
       include: [{
         model: Musica,
         as: 'musicas',
-        through: { attributes: [] } // Não precisamos dos atributos da tabela de ligação na resposta
-      }],
-      // --- AQUI ESTÁ A CORREÇÃO ---
-      // Esta nova sintaxe força o Sequelize a ordenar as músicas
-      // pela coluna 'ordem' da tabela de ligação 'setlist_musicas'
-      order: [
-        ['musicas', 'setlist_musicas', 'ordem', 'ASC']
-      ]
+        through: { attributes: ['ordem'] }
+      }]
     });
 
     if (!setlist) {
       return res.status(404).json({ mensagem: "Setlist não encontrado." });
     }
 
-    // A ordenação manual em JavaScript foi removida, pois a base de dados já faz o trabalho.
+    if (setlist.musicas && setlist.musicas.length > 0) {
+        setlist.musicas.sort((a, b) => a.setlist_musicas.ordem - b.setlist_musicas.ordem);
+    }
+
     return res.status(200).json(setlist);
   } catch (erro) {
     next(erro);
@@ -229,16 +226,13 @@ exports.buscarPublicoPorUuid = async (req, res, conexao, next) => {
           model: Musica,
           as: 'musicas',
           attributes: ['nome', 'artista'],
-          through: { attributes: [] }
+          through: { attributes: ['ordem'] }
         },
         {
           model: Usuario,
           as: 'usuario',
           attributes: ['nome']
         }
-      ],
-      order: [
-        ['musicas', 'setlist_musicas', 'ordem', 'ASC']
       ]
     });
 
@@ -246,6 +240,10 @@ exports.buscarPublicoPorUuid = async (req, res, conexao, next) => {
       return res.status(404).json({ mensagem: "Setlist público não encontrado." });
     }
     
+    if (setlist.musicas && setlist.musicas.length > 0) {
+        setlist.musicas.sort((a, b) => a.setlist_musicas.ordem - b.setlist_musicas.ordem);
+    }
+
     return res.status(200).json(setlist);
   } catch (erro) {
     next(erro);

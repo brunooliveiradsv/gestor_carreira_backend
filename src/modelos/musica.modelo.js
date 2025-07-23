@@ -29,9 +29,9 @@ class Musica extends Model {
     this.hasMany(models.SugestaoMusica, { foreignKey: "musica_id", as: "sugestoes" });
 
     // --- ALTERAÇÃO AQUI ---
-    // Agora usamos o modelo 'SetlistMusica' em vez de uma string
+    // Usamos o modelo 'SetlistMusica' aqui também.
     this.belongsToMany(models.Setlist, { 
-        through: models.SetlistMusica, // Alterado de "setlist_musicas"
+        through: models.SetlistMusica,
         foreignKey: "musica_id", 
         as: "setlists" 
     });
