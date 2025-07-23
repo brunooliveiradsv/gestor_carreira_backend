@@ -75,8 +75,8 @@ exports.gerarContratoPDF = (compromisso, contratante, artista, stream) => {
   doc.fontSize(11).text(`${contratante.cidade_foro}, ${dataHoje}.`, { align: 'center' });
   doc.moveDown(3);
 
-  // --- ASSINATURAS LADO A LADO (CORRIGIDO) ---
-  const assinaturaY = doc.y; // Posição Y inicial para os blocos de assinatura
+ // --- ASSINATURAS LADO A LADO (CORRIGIDO) ---
+  const assinaturaY = doc.y;
   const margin = doc.page.margins.left;
   const larguraUtil = doc.page.width - doc.page.margins.left - doc.page.margins.right;
   const larguraColuna = larguraUtil / 2 - 20;
@@ -87,18 +87,16 @@ exports.gerarContratoPDF = (compromisso, contratante, artista, stream) => {
   // Linhas de assinatura
   doc.font('Helvetica').text('________________________________', coluna1X, assinaturaY, { width: larguraColuna, align: 'center' });
   doc.text('________________________________', coluna2X, assinaturaY, { width: larguraColuna, align: 'center' });
-  doc.moveDown(0.5);
 
-  // Nomes
-  const nomeY = doc.y;
+  // Nomes (com espaçamento vertical calculado)
+  const nomeY = assinaturaY + 15; // Desce 15 pontos para os nomes
   doc.text(contratante.nome, coluna1X, nomeY, { width: larguraColuna, align: 'center' });
   doc.text(artista.nome, coluna2X, nomeY, { width: larguraColuna, align: 'center' });
-  doc.moveDown(0.5);
 
-  // Títulos
-  const tituloY = doc.y;
+  // Títulos (com mais espaçamento vertical calculado)
+  const tituloY = nomeY + 15; // Desce mais 15 pontos para os títulos
   doc.font('Helvetica-Bold').text('CONTRATANTE', coluna1X, tituloY, { width: larguraColuna, align: 'center' });
-  doc.font('Helvetica-Bold').text('CONTRATADO', coluna2X, tituloY, { width: larguraColuna, align: 'center' });
+  doc.text('CONTRATADO', coluna2X, tituloY, { width: larguraColuna, align: 'center' });
 
   // Finaliza o PDF
   doc.end();
