@@ -5,10 +5,9 @@ class Setlist extends Model {
   static init(sequelize) {
     super.init({
       nome: DataTypes.STRING,
-      link_cifraclub: DataTypes.STRING,
       notas_adicionais: DataTypes.TEXT,
       publico: DataTypes.BOOLEAN,
-       publico_uuid: DataTypes.UUID,
+      publico_uuid: DataTypes.UUID,
     }, {
       sequelize,
       tableName: 'setlists'
@@ -20,9 +19,10 @@ class Setlist extends Model {
     this.hasMany(models.Compromisso, { foreignKey: 'setlist_id', as: 'compromissos' });
     
     // --- ALTERAÇÃO AQUI ---
-    // Agora usamos o modelo 'SetlistMusica' em vez de uma string
+    // Agora usamos o modelo 'SetlistMusica' para definir a relação,
+    // o que é mais robusto do que usar uma string com o nome da tabela.
     this.belongsToMany(models.Musica, { 
-      through: models.SetlistMusica, // Alterado de 'setlist_musicas'
+      through: models.SetlistMusica,
       foreignKey: 'setlist_id', 
       as: 'musicas' 
     });
