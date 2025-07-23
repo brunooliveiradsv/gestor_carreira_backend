@@ -2,6 +2,7 @@
 const { Op } = require('sequelize');
 const conquistaServico = require('../servicos/conquista.servico');
 const logService = require('../servicos/log.servico');
+const { v4: uuidv4 } = require('uuid');
 
 exports.estatisticas = async (req, res, conexao, next) => {
   const { Musica, Setlist, Compromisso } = conexao.models;
