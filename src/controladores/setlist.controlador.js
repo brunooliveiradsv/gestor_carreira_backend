@@ -252,5 +252,5 @@ exports.buscarPublicoPorUuid = async (req, res, conexao, next) => {
     return res.status(200).json(setlist);
   } catch (erro) {
     next(erro);
-  }
+  }a
 };

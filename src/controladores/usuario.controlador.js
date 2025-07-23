@@ -268,9 +268,8 @@ exports.atualizarSenha = async (req, res, conexao, next) => {
 exports.atualizarFoto = async (req, res, conexao, next) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
-  const { foto_url: fotoUrlFromBody } = req.body; // Pega a URL do corpo da requisição
+  const { foto_url: fotoUrlFromBody } = req.body;
 
-  // Prioriza o ficheiro enviado. Se não houver ficheiro, usa a URL do corpo.
   const fotoUrlFinal = req.file ? req.file.path : fotoUrlFromBody;
 
   if (!fotoUrlFinal) {
@@ -295,50 +294,37 @@ exports.atualizarFoto = async (req, res, conexao, next) => {
   }
 };
 
+exports.atualizarFotosCapa = async (req, res, conexao, next) => {
+    const { Usuario } = conexao.models;
+    const usuarioId = req.usuario.id;
+    const { ordemCapas } = req.body;
+    const ficheiros = req.files;
 
-exports.atualizarFotosCapa = async (req, res, next) => {
-  const { Usuario } = conexao.models;
-  const usuarioId = req.usuario.id;
-  
-  // Recebe um array que representa a ordem final das imagens
-  const { ordemCapas } = req.body; 
-  const ficheiros = req.files;
-  let uploadIndex = 0;
+    try {
+        let uploadIndex = 0;
+        const urlsFinais = JSON.parse(ordemCapas).map(item => {
+            if (item === 'UPLOAD') {
+                const ficheiro = ficheiros[uploadIndex];
+                uploadIndex++;
+                return ficheiro.path;
+            }
+            return item;
+        });
 
-  try {
-    let urlsFinais = [];
+        const [updated] = await Usuario.update(
+            { foto_capa_url: urlsFinais },
+            { where: { id: usuarioId } }
+        );
 
-    if (ordemCapas && Array.isArray(ordemCapas)) {
-      urlsFinais = ordemCapas.map(item => {
-        // Se o item for um placeholder 'UPLOAD', substitui pelo link do ficheiro correspondente
-        if (item === 'UPLOAD') {
-          if (ficheiros && ficheiros[uploadIndex]) {
-            const url = ficheiros[uploadIndex].path;
-            uploadIndex++;
-            return url;
-          }
-          return null; // Caso de segurança
+        if (updated) {
+            const usuarioAtualizado = await Usuario.findByPk(usuarioId, { attributes: { exclude: ['senha'] } });
+            logService.registrarAcao(conexao, usuarioId, 'UPDATE_COVER_PICTURES', { count: urlsFinais.length });
+            return res.status(200).json(usuarioAtualizado.get({ plain: true }));
         }
-        // Se for um link http, mantém o link
-        if (typeof item === 'string' && item.startsWith('http')) {
-          return item;
-        }
-        return null;
-      }).filter(url => url !== null); // Remove quaisquer itens nulos
+        
+        return res.status(404).json({ mensagem: "Utilizador não encontrado." });
+
+    } catch (error) {
+        next(error);
     }
-
-    // Limita a um máximo de 3 imagens
-    urlsFinais = urlsFinais.slice(0, 3);
-
-    await Usuario.update({ foto_capa_url: urlsFinais }, {
-      where: { id: usuarioId }
-    });
-
-    const usuarioAtualizado = await Usuario.findByPk(usuarioId, { attributes: { exclude: ['senha'] } });
-    logService.registrarAcao(conexao, usuarioId, 'UPDATE_COVER_PICTURES');
-    return res.status(200).json(usuarioAtualizado.get({ plain: true }));
-
-  } catch (error) {
-    next(error);
-  }
 };
