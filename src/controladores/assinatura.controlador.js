@@ -3,6 +3,12 @@
 // --- 1. ESTA LINHA É A CORREÇÃO CRUCIAL ---
 // Ela inicializa o Stripe e torna a variável 'stripe' disponível para todo o ficheiro.
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const planosStripe = {
+  padrao_mensal: process.env.STRIPE_PRICE_ID_PADRAO_MENSAL,
+  padrao_anual: process.env.STRIPE_PRICE_ID_PADRAO_ANUAL,
+  premium_mensal: process.env.STRIPE_PRICE_ID_PREMIUM_MENSAL,
+  premium_anual: process.env.STRIPE_PRICE_ID_PREMIUM_ANUAL,
+};
 
 exports.iniciarTesteGratuito = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
@@ -102,7 +108,8 @@ exports.trocarPlano = async (req, res, conexao) => {
   }
 };
 
-exports.criarSessaoPortal = async (req, res, conexao) => {
+// --- FUNÇÃO ATUALIZADA E MAIS INTELIGENTE ---
+exports.criarSessaoPortal = async (req, res, conexao, next) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
 
@@ -110,20 +117,41 @@ exports.criarSessaoPortal = async (req, res, conexao) => {
     const usuario = await Usuario.findByPk(usuarioId);
     const customerId = usuario.stripe_customer_id;
 
-    if (!customerId) {
-      return res.status(400).json({ mensagem: "Este usuário não possui uma assinatura para gerir." });
+    // CASO 1: O utilizador já é um cliente pagador e tem um ID de cliente
+    if (customerId) {
+      console.log(`Utilizador ${usuarioId} já tem um Customer ID. A abrir o portal de gestão.`);
+      const return_url = `${process.env.FRONTEND_URL}/configuracoes`;
+      const portalSession = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: return_url,
+      });
+      return res.json({ url: portalSession.url });
     }
 
-    const return_url = `${process.env.FRONTEND_URL}/configuracoes`;
+    // CASO 2: O utilizador está em teste e não tem ID de cliente
+    if (usuario.status_assinatura === 'teste') {
+      console.log(`Utilizador ${usuarioId} está em teste. A criar uma sessão de checkout para ativar a assinatura.`);
+      // Assumimos que o período de teste é sempre do plano 'premium' e o checkout será para o plano mensal
+      const priceId = planosStripe.premium_mensal; 
+      if (!priceId) {
+        return res.status(500).json({ mensagem: "ID do plano Premium não configurado no servidor." });
+      }
 
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: return_url,
-    });
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        mode: 'subscription',
+        client_reference_id: usuarioId,
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: `${process.env.FRONTEND_URL}/configuracoes?sucesso=true`,
+        cancel_url: `${process.env.FRONTEND_URL}/configuracoes`,
+      });
+      return res.json({ url: session.url });
+    }
+    
+    // CASO 3: O utilizador não tem assinatura nem está em teste
+    return res.status(400).json({ mensagem: "Este utilizador não possui uma assinatura para gerir." });
 
-    return res.json({ url: portalSession.url });
   } catch (error) {
-    console.error("Erro ao criar sessão do portal do cliente:", error);
-    return res.status(500).json({ mensagem: "Não foi possível aceder ao portal de gestão." });
+    next(error);
   }
 };
