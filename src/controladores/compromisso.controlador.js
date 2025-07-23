@@ -2,6 +2,7 @@
 const { Op } = require("sequelize"); // <<< IMPORTANTE: Adicione esta linha
 const conquistaServico = require("../servicos/conquista.servico.js");
 const compromissoServico = require("../servicos/compromisso.servico.js");
+const contratoServico = require("../servicos/contrato.servico.js");
 
 exports.criar = async (req, res, conexao) => {
   const { Compromisso } = conexao.models;
