@@ -7,21 +7,24 @@ const logService = require('../servicos/log.servico');
 exports.estatisticas = async (req, res, conexao, next) => {
   const { Musica, Setlist, Compromisso, SetlistMusica } = conexao.models;
   const usuarioId = req.usuario.id;
+
   try {
     const anoAtual = new Date().getFullYear();
 
-    // --- NOVOS CÁLCULOS ---
+    // --- CÁLCULO CORRIGIDO PARA SHOWS NO ANO ---
     const totalShowsAno = await Compromisso.count({
         where: {
             usuario_id: usuarioId,
             tipo: 'Show',
             status: 'Realizado',
+            // Garante que estamos a olhar apenas para o ano atual
             [Op.and]: [
-                fn('EXTRACT', col('data'), 'year', fn('YEAR', col('data'))) // Sintaxe corrigida
+                fn('EXTRACT', col('data'), 'year') 
             ]
         }
     });
 
+    // --- CÁLCULO CORRIGIDO PARA MÚSICA MAIS TOCADA ---
     const musicaMaisTocadaRaw = await SetlistMusica.findOne({
         attributes: [
             'musica_id',
@@ -31,9 +34,9 @@ exports.estatisticas = async (req, res, conexao, next) => {
             model: Setlist,
             as: 'setlist',
             where: { usuario_id: usuarioId },
-            attributes: []
+            attributes: [] // Não precisamos dos dados do setlist, apenas de filtrar por eles
         }],
-        group: ['musica_id'],
+        group: ['musica_id', 'setlist.id'], // Agrupa pela música para contar
         order: [[col('contagem'), 'DESC']],
         limit: 1,
         raw: true
@@ -50,7 +53,7 @@ exports.estatisticas = async (req, res, conexao, next) => {
             };
         }
     }
-    // --- FIM DOS NOVOS CÁLCULOS ---
+    // --- FIM DAS CORREÇÕES ---
 
     const totalMusicas = await Musica.count({ where: { usuario_id: usuarioId } });
     const totalSetlists = await Setlist.count({ where: { usuario_id: usuarioId } });
@@ -68,8 +71,8 @@ exports.estatisticas = async (req, res, conexao, next) => {
         totalMusicas, 
         totalSetlists, 
         proximoShow,
-        totalShowsAno,      // Adicionado
-        musicaMaisTocada    // Adicionado
+        totalShowsAno,
+        musicaMaisTocada
     });
   } catch (erro) {
     next(erro);
