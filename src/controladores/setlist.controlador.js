@@ -5,9 +5,53 @@ const conquistaServico = require('../servicos/conquista.servico');
 const logService = require('../servicos/log.servico');
 
 exports.estatisticas = async (req, res, conexao, next) => {
-  const { Musica, Setlist, Compromisso } = conexao.models;
+  const { Musica, Setlist, Compromisso, SetlistMusica } = conexao.models;
   const usuarioId = req.usuario.id;
   try {
+    const anoAtual = new Date().getFullYear();
+
+    // --- NOVOS CÁLCULOS ---
+    const totalShowsAno = await Compromisso.count({
+        where: {
+            usuario_id: usuarioId,
+            tipo: 'Show',
+            status: 'Realizado',
+            [Op.and]: [
+                fn('EXTRACT', col('data'), 'year', fn('YEAR', col('data'))) // Sintaxe corrigida
+            ]
+        }
+    });
+
+    const musicaMaisTocadaRaw = await SetlistMusica.findOne({
+        attributes: [
+            'musica_id',
+            [fn('COUNT', col('musica_id')), 'contagem']
+        ],
+        include: [{
+            model: Setlist,
+            as: 'setlist',
+            where: { usuario_id: usuarioId },
+            attributes: []
+        }],
+        group: ['musica_id'],
+        order: [[col('contagem'), 'DESC']],
+        limit: 1,
+        raw: true
+    });
+    
+    let musicaMaisTocada = null;
+    if (musicaMaisTocadaRaw) {
+        const musica = await Musica.findByPk(musicaMaisTocadaRaw.musica_id);
+        if(musica) {
+            musicaMaisTocada = {
+                nome: musica.nome,
+                artista: musica.artista,
+                contagem: parseInt(musicaMaisTocadaRaw.contagem, 10)
+            };
+        }
+    }
+    // --- FIM DOS NOVOS CÁLCULOS ---
+
     const totalMusicas = await Musica.count({ where: { usuario_id: usuarioId } });
     const totalSetlists = await Setlist.count({ where: { usuario_id: usuarioId } });
     const proximoShow = await Compromisso.findOne({
@@ -19,7 +63,14 @@ exports.estatisticas = async (req, res, conexao, next) => {
       order: [['data', 'ASC']],
       include: [{ model: Setlist, as: 'setlist' }]
     });
-    return res.status(200).json({ totalMusicas, totalSetlists, proximoShow });
+
+    return res.status(200).json({ 
+        totalMusicas, 
+        totalSetlists, 
+        proximoShow,
+        totalShowsAno,      // Adicionado
+        musicaMaisTocada    // Adicionado
+    });
   } catch (erro) {
     next(erro);
   }
