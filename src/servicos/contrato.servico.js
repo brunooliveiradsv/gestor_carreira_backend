@@ -1,70 +1,92 @@
 // src/servicos/contrato.servico.js
 const PDFDocument = require('pdfkit');
 
+// Função auxiliar para adicionar texto com formatação padrão
+function adicionarTexto(doc, texto) {
+    doc.font('Helvetica').fontSize(11).lineGap(5).text(texto, { align: 'justify' });
+    doc.moveDown();
+}
+
+// Função auxiliar para adicionar títulos de cláusulas
+function adicionarClausula(doc, numero, titulo) {
+    doc.font('Helvetica-Bold').fontSize(12).text(`Cláusula ${numero}ª - ${titulo}`, { underline: true });
+    doc.moveDown(0.5);
+}
+
 exports.gerarContratoPDF = (compromisso, contratante, artista, stream) => {
-  const doc = new PDFDocument({ margin: 50 });
+  const doc = new PDFDocument({ margin: 72 }); // Margens A4 padrão
   doc.pipe(stream);
 
-  // --- OPÇÕES DE FORMATAÇÃO DE DATA E HORA COM FUSO HORÁRIO CORRETO ---
-  const opcoesData = {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'America/Sao_Paulo' // Força o fuso horário do Brasil
-  };
-  const opcoesHora = {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'America/Sao_Paulo' // Força o fuso horário do Brasil
-  };
+  const dataCompromisso = new Date(compromisso.data);
+  const opcoesData = { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' };
+  const opcoesHora = { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' };
+  const dataFormatada = dataCompromisso.toLocaleDateString('pt-BR', opcoesData);
+  const horaFormatada = dataCompromisso.toLocaleTimeString('pt-BR', opcoesHora);
+  const valorCache = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(compromisso.valor_cache || 0);
 
   // --- CABEÇALHO ---
-  doc.fontSize(20).font('Helvetica-Bold').text('CONTRATO DE PRESTAÇÃO DE SERVIÇOS ARTÍSTICOS', { align: 'center' });
+  doc.fontSize(16).font('Helvetica-Bold').text('CONTRATO DE PRESTAÇÃO DE SERVIÇOS ARTÍSTICOS', { align: 'center' });
   doc.moveDown(2);
 
   // --- PARTES ENVOLVIDAS ---
-  doc.fontSize(12).font('Helvetica-Bold').text('CONTRATANTE:', { continued: true });
-  doc.font('Helvetica').text(` ${contratante.nome}, NIF/CPF: ${contratante.nif}, com morada em ${contratante.morada}.`);
+  doc.fontSize(12).font('Helvetica-Bold').text('DAS PARTES');
+  doc.moveDown(0.5);
+  adicionarTexto(doc, `CONTRATANTE: ${contratante.nome}, portador(a) do NIF/CPF nº ${contratante.nif}, com morada em ${contratante.morada}, doravante designado(a) simplesmente como CONTRATANTE.`);
+  adicionarTexto(doc, `CONTRATADO: ${artista.nome}, músico(a) profissional, doravante designado(a) simplesmente como CONTRATADO.`);
   doc.moveDown();
 
-  doc.font('Helvetica-Bold').text('CONTRATADO:', { continued: true });
-  doc.font('Helvetica').text(` ${artista.nome}, atuando como artista.`);
-  doc.moveDown(2);
+  // --- CLÁUSULAS ---
+  adicionarClausula(doc, '1ª', 'DO OBJETO');
+  adicionarTexto(doc, `O presente contrato tem como objeto a apresentação musical do CONTRATADO no evento "${compromisso.nome_evento}", a ser realizado no dia ${dataFormatada}.`);
 
-  // --- CLÁUSULAS DO CONTRATO ---
-  doc.fontSize(14).font('Helvetica-Bold').text('Cláusula 1ª - Objeto do Contrato', { underline: true });
-  doc.fontSize(12).font('Helvetica').text(
-    // --- CORREÇÃO AQUI: Usa as novas opções de formatação ---
-    `O presente contrato tem como objeto a prestação de serviços artísticos musicais pelo CONTRATADO para o evento "${compromisso.nome_evento}", a ser realizado em ${new Date(compromisso.data).toLocaleDateString('pt-BR', opcoesData)}.`,
-    { align: 'justify' }
-  );
+  adicionarClausula(doc, '2ª', 'DO LOCAL E HORÁRIO');
+  adicionarTexto(doc, `A apresentação ocorrerá no seguinte local: ${compromisso.local}. O CONTRATADO deverá estar disponível no local com, no mínimo, 60 (sessenta) minutos de antecedência. A apresentação terá início previsto para as ${horaFormatada}h.`);
+
+  adicionarClausula(doc, '3ª', 'DAS OBRIGAÇÕES DO CONTRATADO');
+  adicionarTexto(doc, `Compete ao CONTRATADO:`);
+  doc.list([
+      `Realizar a apresentação musical conforme acordado, com duração aproximada a ser definida entre as partes.`,
+      `Comparecer ao local do evento no horário estipulado, munido de seus instrumentos e equipamentos pessoais necessários à apresentação.`,
+      `Zelar pela qualidade técnica e artística da apresentação.`
+  ], { bulletRadius: 2, textIndent: 10 });
   doc.moveDown();
 
-  doc.fontSize(14).font('Helvetica-Bold').text('Cláusula 2ª - Local e Horário', { underline: true });
-  doc.fontSize(12).font('Helvetica').text(
-    // --- CORREÇÃO AQUI: Usa as novas opções de formatação ---
-    `A apresentação ocorrerá em ${compromisso.local}, com início previsto para as ${new Date(compromisso.data).toLocaleTimeString('pt-BR', opcoesHora)}h.`,
-    { align: 'justify' }
-  );
+  adicionarClausula(doc, '4ª', 'DAS OBRIGAÇÕES DO CONTRATANTE');
+  adicionarTexto(doc, `Compete ao CONTRATANTE:`);
+  doc.list([
+      `Fornecer a estrutura de palco necessária, incluindo sistema de som e iluminação adequados e em perfeito funcionamento, conforme rider técnico (se aplicável).`,
+      `Disponibilizar um camarim seguro e adequado para o CONTRATADO.`,
+      `Garantir a segurança do CONTRATADO e de seus equipamentos durante todo o período de sua permanência no local do evento.`,
+      `Efetuar o pagamento do cachê nos termos da Cláusula 5ª.`
+  ], { bulletRadius: 2, textIndent: 10 });
   doc.moveDown();
+  
+  adicionarClausula(doc, '5ª', 'DO PAGAMENTO');
+  adicionarTexto(doc, `A título de remuneração (cachê), o CONTRATANTE pagará ao CONTRATADO o valor total de ${valorCache}. O pagamento deverá ser efetuado da seguinte forma: [ESPECIFICAR FORMA DE PAGAMENTO, EX: 50% na assinatura deste contrato e 50% até o final da apresentação].`);
 
-  doc.fontSize(14).font('Helvetica-Bold').text('Cláusula 3ª - Pagamento', { underline: true });
-  const valorCache = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(compromisso.valor_cache || 0);
-  doc.fontSize(12).font('Helvetica').text(
-    `A título de cachê, o CONTRATANTE pagará ao CONTRATADO o valor de ${valorCache}.`,
-    { align: 'justify' }
-  );
+  adicionarClausula(doc, '6ª', 'DA RESCISÃO');
+  adicionarTexto(doc, `O cancelamento por qualquer uma das partes deverá ser comunicado com antecedência mínima de 15 (quinze) dias. O descumprimento desta cláusula por parte do CONTRATANTE implicará no pagamento de uma multa de 50% do valor total do cachê. Caso o cancelamento parta do CONTRATADO, este deverá restituir qualquer valor já recebido.`);
+  
+  adicionarClausula(doc, '7ª', 'DAS DISPOSIÇÕES GERAIS');
+  adicionarTexto(doc, `O CONTRATANTE autoriza o uso de imagem e som da apresentação para fins de divulgação e portfólio do CONTRATADO. Este contrato não estabelece qualquer vínculo empregatício entre as partes, tratando-se de uma prestação de serviço autônoma.`);
+
+  adicionarClausula(doc, '8ª', 'DO FORO');
+  adicionarTexto(doc, `Fica eleito o foro da comarca de [SUA CIDADE], [SEU ESTADO], para dirimir quaisquer dúvidas oriundas do presente contrato.`);
+  doc.moveDown(4);
+
+  // --- ASSINATURAS E DATA ---
+  const dataHoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' });
+  doc.fontSize(11).text(`[SUA CIDADE], ${dataHoje}.`, { align: 'center' });
   doc.moveDown(3);
 
-  // --- ASSINATURAS ---
   doc.text('______________________________________', { align: 'center' });
   doc.text(contratante.nome, { align: 'center' });
-  doc.text('(Contratante)', { align: 'center' });
+  doc.font('Helvetica-Bold').text('CONTRATANTE', { align: 'center' });
   doc.moveDown(2);
 
   doc.text('______________________________________', { align: 'center' });
   doc.text(artista.nome, { align: 'center' });
-  doc.text('(Contratado)', { align: 'center' });
+  doc.font('Helvetica-Bold').text('CONTRATADO', { align: 'center' });
 
   // Finaliza o PDF
   doc.end();
