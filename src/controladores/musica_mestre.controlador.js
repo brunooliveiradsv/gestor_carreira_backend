@@ -1,15 +1,13 @@
 // src/controladores/musica_mestre.controlador.js
 const { Op } = require("sequelize");
 
-// Função auxiliar para associar tags (evita repetição de código)
+// Função auxiliar para associar tags
 const associarTags = async (musica, tagIds, conexao, transacao) => {
     if (tagIds !== undefined) {
-        // Remove as associações antigas
         await conexao.query(
             'DELETE FROM musica_tags WHERE musica_id = :musicaId',
             { replacements: { musicaId: musica.id }, transaction: transacao }
         );
-        // Adiciona as novas, se houver
         if (tagIds.length > 0) {
             const associacoes = tagIds.map(tagId => ({ musica_id: musica.id, tag_id: tagId, created_at: new Date(), updated_at: new Date() }));
             await conexao.getQueryInterface().bulkInsert('musica_tags', associacoes, { transaction: transacao });
@@ -17,7 +15,6 @@ const associarTags = async (musica, tagIds, conexao, transacao) => {
     }
 };
 
-// Admin: Lista todas as músicas mestre, agora com as tags
 exports.listar = async (req, res, conexao) => {
     const { Musica, Tag } = conexao.models;
     try {
@@ -32,7 +29,6 @@ exports.listar = async (req, res, conexao) => {
     }
 };
 
-// Admin: Cria uma nova música mestre, agora com tags
 exports.criar = async (req, res, conexao) => {
     const { Musica } = conexao.models;
     const { nome, artista, tom, bpm, link_cifra, notas_adicionais, is_publica, tagIds } = req.body;
@@ -42,8 +38,11 @@ exports.criar = async (req, res, conexao) => {
     
     try {
         const novaMusica = await Musica.create({ 
-            nome, artista, tom, bpm: bpm || null, link_cifra, 
-            notas_adicionais, is_publica: is_publica !== undefined ? is_publica : false,
+            nome, artista, tom, 
+            // CORREÇÃO: Converte BPM vazio para null
+            bpm: (bpm === '' || bpm === undefined) ? null : parseInt(bpm, 10), 
+            link_cifra, notas_adicionais, 
+            is_publica: is_publica !== undefined ? is_publica : false,
             usuario_id: null, master_id: null 
         }, { transaction: t });
 
@@ -59,7 +58,6 @@ exports.criar = async (req, res, conexao) => {
     }
 };
 
-// Admin: Atualiza uma música mestre, agora com tags
 exports.atualizar = async (req, res, conexao) => {
     const { Musica } = conexao.models;
     const { id } = req.params;
@@ -71,6 +69,11 @@ exports.atualizar = async (req, res, conexao) => {
         if (!musica) {
             await t.rollback();
             return res.status(404).json({ mensagem: "Música mestre não encontrada." });
+        }
+
+        // CORREÇÃO: Converte BPM vazio para null antes de atualizar
+        if (dadosMusica.bpm === '' || dadosMusica.bpm === undefined) {
+            dadosMusica.bpm = null;
         }
 
         await musica.update(dadosMusica, { transaction: t });
@@ -86,7 +89,6 @@ exports.atualizar = async (req, res, conexao) => {
     }
 };
 
-// Admin: Apaga uma música mestre
 exports.apagar = async (req, res, conexao) => {
     const { Musica } = conexao.models;
     const { id } = req.params;
