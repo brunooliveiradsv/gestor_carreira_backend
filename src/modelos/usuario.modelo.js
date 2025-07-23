@@ -17,7 +17,7 @@ class Usuario extends Model {
       status_assinatura: DataTypes.ENUM('inativa', 'ativa', 'teste', 'cancelada', 'inadimplente'),
       teste_termina_em: DataTypes.DATE,
        stripe_customer_id: DataTypes.STRING,
-       foto_capa_url: DataTypes.STRING, // <-- ADICIONE ESTA LINHA
+       foto_capa_url: DataTypes.JSONB, // <-- ADICIONE ESTA LINHA
       video_destaque_url: DataTypes.STRING, // <-- ADICIONE ESTA LINHA
     }, { sequelize, tableName: 'usuarios' })
   }

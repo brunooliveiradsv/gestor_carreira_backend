@@ -7,9 +7,11 @@ const usuarioControlador = require('../controladores/usuario.controlador');
 const authMiddleware = require('../middlewares/autenticacao');
 const validar = require('../middlewares/validador');
 
-module.exports = (conexao) => {
+  module.exports = (conexao) => {
   const roteador = express.Router();
-  const upload = multer({ storage: storage });
+  // Limite de 3 ficheiros, com o nome de campo 'capas'
+  const upload = multer({ storage: storage, limits: { fileSize: 10 * 1024 * 1024 } });
+
 
   const registrarRegras = [
     body('nome').notEmpty().withMessage('O nome é um campo obrigatório.'),
@@ -34,7 +36,7 @@ module.exports = (conexao) => {
   roteador.put('/perfil/senha', (req, res, next) => usuarioControlador.atualizarSenha(req, res, conexao, next));
   roteador.put('/perfil/publico', (req, res, next) => usuarioControlador.atualizarPerfilPublico(req, res, conexao, next));
   roteador.put('/perfil/foto', upload.single('foto'), (req, res, next) => usuarioControlador.atualizarFoto(req, res, conexao, next));
-  roteador.put('/perfil/capa', upload.single('capa'), (req, res, next) => usuarioControlador.atualizarFotoCapa(req, res, conexao, next));
+  roteador.put('/perfil/capas', upload.array('capas', 3), (req, res, next) => usuarioControlador.atualizarFotosCapa(req, res, conexao, next));
 
   return roteador;
 };

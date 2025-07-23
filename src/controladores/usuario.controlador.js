@@ -294,28 +294,42 @@ exports.atualizarFoto = async (req, res, conexao, next) => {
   }
 };
 
-exports.atualizarFotoCapa = async (req, res, conexao, next) => {
+exports.atualizarFotosCapa = async (req, res, next) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
-
-  if (!req.file) {
-    return res.status(400).json({ mensagem: 'Nenhum ficheiro de imagem foi enviado.' });
-  }
-
-  const fotoCapaUrl = req.file.path; 
+  
+  // Recebe os links de imagens hospedadas
+  const { linksCapa } = req.body; 
+  // Recebe os ficheiros que foram enviados
+  const ficheiros = req.files;
 
   try {
-    const [updated] = await Usuario.update({ foto_capa_url: fotoCapaUrl }, {
+    let urlsFinais = [];
+
+    // Processa os links de imagens existentes
+    if (linksCapa) {
+      // Garante que é um array
+      const links = Array.isArray(linksCapa) ? linksCapa : [linksCapa];
+      urlsFinais.push(...links.filter(link => typeof link === 'string' && link.startsWith('http')));
+    }
+
+    // Processa os novos ficheiros enviados
+    if (ficheiros && ficheiros.length > 0) {
+      const urlsDosUploads = ficheiros.map(file => file.path);
+      urlsFinais.push(...urlsDosUploads);
+    }
+
+    // Limita a um máximo de 3 imagens
+    urlsFinais = urlsFinais.slice(0, 3);
+
+    await Usuario.update({ foto_capa_url: urlsFinais }, {
       where: { id: usuarioId }
     });
 
-    if (updated) {
-      const usuarioAtualizado = await Usuario.findByPk(usuarioId, { attributes: { exclude: ['senha'] } });
-      logService.registrarAcao(conexao, usuarioId, 'UPDATE_COVER_PICTURE', { new_url: fotoCapaUrl });
-      return res.status(200).json(usuarioAtualizado.get({ plain: true }));
-    }
-    
-    return res.status(404).json({ mensagem: "Utilizador não encontrado." });
+    const usuarioAtualizado = await Usuario.findByPk(usuarioId, { attributes: { exclude: ['senha'] } });
+    logService.registrarAcao(conexao, usuarioId, 'UPDATE_COVER_PICTURES');
+    return res.status(200).json(usuarioAtualizado.get({ plain: true }));
+
   } catch (error) {
     next(error);
   }
