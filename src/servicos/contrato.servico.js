@@ -75,25 +75,30 @@ exports.gerarContratoPDF = (compromisso, contratante, artista, stream) => {
   doc.fontSize(11).text(`${contratante.cidade_foro}, ${dataHoje}.`, { align: 'center' });
   doc.moveDown(3);
 
-  // --- ASSINATURAS LADO A LADO ---
-  const margin = 72;
-  const page_width = doc.page.width - margin * 2;
-  const col_width = page_width / 2 - 20; // Largura de cada coluna de assinatura
-  const col1_x = margin;
-  const col2_x = margin + page_width / 2 + 20;
-  const sig_y = doc.y; // Pega a posição Y atual
+  // --- ASSINATURAS LADO A LADO (CORRIGIDO) ---
+  const assinaturaY = doc.y; // Posição Y inicial para os blocos de assinatura
+  const margin = doc.page.margins.left;
+  const larguraUtil = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  const larguraColuna = larguraUtil / 2 - 20;
+  
+  const coluna1X = margin;
+  const coluna2X = margin + larguraUtil / 2 + 20;
 
-  // Coluna da Esquerda (Contratante)
-  doc.text('______________________________________', col1_x, sig_y, { width: col_width, align: 'center' });
+  // Linhas de assinatura
+  doc.font('Helvetica').text('________________________________', coluna1X, assinaturaY, { width: larguraColuna, align: 'center' });
+  doc.text('________________________________', coluna2X, assinaturaY, { width: larguraColuna, align: 'center' });
   doc.moveDown(0.5);
-  doc.text(contratante.nome, { width: col_width, align: 'center' });
-  doc.font('Helvetica-Bold').text('CONTRATANTE', { width: col_width, align: 'center' });
 
-  // Coluna da Direita (Contratado) - Usa a mesma posição Y
-  doc.font('Helvetica').text('______________________________________', col2_x, sig_y, { width: col_width, align: 'center' });
+  // Nomes
+  const nomeY = doc.y;
+  doc.text(contratante.nome, coluna1X, nomeY, { width: larguraColuna, align: 'center' });
+  doc.text(artista.nome, coluna2X, nomeY, { width: larguraColuna, align: 'center' });
   doc.moveDown(0.5);
-  doc.text(artista.nome, { width: col_width, align: 'center' });
-  doc.font('Helvetica-Bold').text('CONTRATADO', { width: col_width, align: 'center' });
+
+  // Títulos
+  const tituloY = doc.y;
+  doc.font('Helvetica-Bold').text('CONTRATANTE', coluna1X, tituloY, { width: larguraColuna, align: 'center' });
+  doc.font('Helvetica-Bold').text('CONTRATADO', coluna2X, tituloY, { width: larguraColuna, align: 'center' });
 
   // Finaliza o PDF
   doc.end();
