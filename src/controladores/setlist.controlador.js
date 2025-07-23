@@ -189,3 +189,68 @@ exports.sugerirMusicas = async (req, res, conexao, next) => {
     next(erro);
   }
 };
+
+exports.gerirPartilha = async (req, res, conexao, next) => {
+  const { Setlist } = conexao.models;
+  const { id } = req.params;
+  const { partilhar } = req.body; // true para ativar, false para desativar
+  const usuarioId = req.usuario.id;
+
+  try {
+    const setlist = await Setlist.findOne({ where: { id, usuario_id: usuarioId } });
+    if (!setlist) {
+      return res.status(404).json({ mensagem: "Setlist não encontrado." });
+    }
+
+    if (partilhar) {
+      // Se for para partilhar e ainda não tiver um UUID, cria um
+      if (!setlist.publico_uuid) {
+        setlist.publico_uuid = uuidv4();
+      }
+    } else {
+      // Se for para parar de partilhar, apaga o UUID
+      setlist.publico_uuid = null;
+    }
+
+    await setlist.save();
+    return res.status(200).json(setlist);
+  } catch (erro) {
+    next(erro);
+  }
+};
+
+// --- NOVA FUNÇÃO PARA BUSCAR O SETLIST PÚBLICO ---
+exports.buscarPublicoPorUuid = async (req, res, conexao, next) => {
+  const { Setlist, Musica, Usuario } = conexao.models;
+  const { uuid } = req.params;
+
+  try {
+    const setlist = await Setlist.findOne({
+      where: { publico_uuid: uuid },
+      include: [
+        {
+          model: Musica,
+          as: 'musicas',
+          attributes: ['nome', 'artista'], // Apenas os dados públicos da música
+          through: { attributes: [] }
+        },
+        {
+          model: Usuario,
+          as: 'usuario',
+          attributes: ['nome'] // Para mostrar o nome do artista
+        }
+      ],
+      order: [
+        ['musicas', 'setlist_musicas', 'ordem', 'ASC']
+      ]
+    });
+
+    if (!setlist) {
+      return res.status(404).json({ mensagem: "Setlist público não encontrado." });
+    }
+
+    return res.status(200).json(setlist);
+  } catch (erro) {
+    next(erro);
+  }
+};

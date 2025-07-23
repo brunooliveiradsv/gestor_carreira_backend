@@ -6,6 +6,9 @@ const assinaturaMiddleware = require('../middlewares/assinatura');
 
 module.exports = (conexao) => {
   const roteador = express.Router();
+
+  roteador.get('/publico/:uuid', (req, res, next) => setlistControlador.buscarPublicoPorUuid(req, res, conexao, next));
+
   roteador.use(authMiddleware(conexao));
 
   // --- ROTAS DO DASHBOARD E GERAIS ---
@@ -21,6 +24,7 @@ module.exports = (conexao) => {
   // --- ROTAS DE MANIPULAÇÃO DE MÚSICAS NO SETLIST ---
   roteador.put('/:id/musicas', (req, res, next) => setlistControlador.atualizarMusicas(req, res, conexao, next));
   roteador.post('/:id/sugerir', (req, res, next) => setlistControlador.sugerirMusicas(req, res, conexao, next));
+  roteador.patch('/:id/partilhar', (req, res, next) => setlistControlador.gerirPartilha(req, res, conexao, next));
 
   return roteador;
 };

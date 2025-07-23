@@ -8,6 +8,7 @@ class Setlist extends Model {
       link_cifraclub: DataTypes.STRING,
       notas_adicionais: DataTypes.TEXT,
       publico: DataTypes.BOOLEAN,
+       publico_uuid: DataTypes.UUID,
     }, {
       sequelize,
       tableName: 'setlists'
