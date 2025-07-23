@@ -18,6 +18,8 @@ const SetlistMusica = require('../modelos/setlist_musica.modelo.js');
 const SugestaoMusica = require('../modelos/sugestao_musica.modelo.js');
 const ActivityLog = require('../modelos/activity_log.modelo.js');
 const Post = require('../modelos/post.modelo.js');
+const Enquete = require('../modelos/enquete.modelo');
+const EnqueteOpcao = require('../modelos/enquete_opcao.modelo');
 
 const conexao = new Sequelize(dbConfig);
 
@@ -37,7 +39,9 @@ const modelos = [
   SetlistMusica,
   SugestaoMusica,
   ActivityLog,
-  Post
+  Post,
+  Enquete,
+  EnqueteOpcao
 ];
 
 // Inicializa cada modelo, passando a conexão
