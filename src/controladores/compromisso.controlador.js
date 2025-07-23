@@ -74,7 +74,7 @@ exports.atualizar = async (req, res, conexao, next) => {
 };
 
 exports.listar = async (req, res, conexao) => {
-  const { Compromisso } = conexao.models;
+  const { Compromisso, Setlist } = conexao.models;
   const usuarioId = req.usuario.id;
 
   try {
