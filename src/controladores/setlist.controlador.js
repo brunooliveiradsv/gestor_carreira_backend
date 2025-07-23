@@ -67,20 +67,64 @@ exports.buscarPorId = async (req, res, conexao, next) => {
       include: [{
         model: Musica,
         as: 'musicas',
-        // Pede explicitamente o atributo 'ordem' da tabela de ligação
         through: { attributes: ['ordem'] }
       }]
-      // A cláusula 'order' foi removida para evitar o erro de SQL
     });
 
     if (!setlist) {
       return res.status(404).json({ mensagem: "Setlist não encontrado." });
     }
 
-    // --- AQUI ESTÁ A CORREÇÃO FINAL ---
-    // A propriedade correta, como visto no log, é `setlist_musicas`.
+    // --- CORREÇÃO ROBUSTA ---
+    // Esta lógica verifica qual propriedade ('SetlistMusica' ou 'setlist_musicas')
+    // o Sequelize usou e ordena corretamente, evitando o erro.
     if (setlist.musicas && setlist.musicas.length > 0) {
-        setlist.musicas.sort((a, b) => a.setlist_musicas.ordem - b.setlist_musicas.ordem);
+        setlist.musicas.sort((a, b) => {
+            const ordemA = a.SetlistMusica?.ordem ?? a.setlist_musicas?.ordem ?? 0;
+            const ordemB = b.SetlistMusica?.ordem ?? b.setlist_musicas?.ordem ?? 0;
+            return ordemA - ordemB;
+        });
+    }
+
+    return res.status(200).json(setlist);
+  } catch (erro) {
+    next(erro);
+  }
+};
+
+exports.buscarPublicoPorUuid = async (req, res, conexao, next) => {
+  const { Setlist, Musica, Usuario } = conexao.models;
+  const { uuid } = req.params;
+
+  try {
+    const setlist = await Setlist.findOne({
+      where: { publico_uuid: uuid },
+      include: [
+        {
+          model: Musica,
+          as: 'musicas',
+          attributes: ['nome', 'artista'],
+          through: { attributes: ['ordem'] }
+        },
+        {
+          model: Usuario,
+          as: 'usuario',
+          attributes: ['nome']
+        }
+      ]
+    });
+
+    if (!setlist) {
+      return res.status(404).json({ mensagem: "Setlist público não encontrado." });
+    }
+    
+    // --- CORREÇÃO ROBUSTA APLICADA AQUI TAMBÉM ---
+    if (setlist.musicas && setlist.musicas.length > 0) {
+        setlist.musicas.sort((a, b) => {
+            const ordemA = a.SetlistMusica?.ordem ?? a.setlist_musicas?.ordem ?? 0;
+            const ordemB = b.SetlistMusica?.ordem ?? b.setlist_musicas?.ordem ?? 0;
+            return ordemA - ordemB;
+        });
     }
 
     return res.status(200).json(setlist);
@@ -218,38 +262,3 @@ exports.gerirPartilha = async (req, res, conexao, next) => {
   }
 };
 
-exports.buscarPublicoPorUuid = async (req, res, conexao, next) => {
-  const { Setlist, Musica, Usuario } = conexao.models;
-  const { uuid } = req.params;
-
-  try {
-    const setlist = await Setlist.findOne({
-      where: { publico_uuid: uuid },
-      include: [
-        {
-          model: Musica,
-          as: 'musicas',
-          attributes: ['nome', 'artista'],
-          through: { attributes: ['ordem'] }
-        },
-        {
-          model: Usuario,
-          as: 'usuario',
-          attributes: ['nome']
-        }
-      ]
-    });
-
-    if (!setlist) {
-      return res.status(404).json({ mensagem: "Setlist público não encontrado." });
-    }
-    
-    if (setlist.musicas && setlist.musicas.length > 0) {
-        setlist.musicas.sort((a, b) => a.setlist_musicas.ordem - b.setlist_musicas.ordem);
-    }
-
-    return res.status(200).json(setlist);
-  } catch (erro) {
-    next(erro);
-  }
-};
