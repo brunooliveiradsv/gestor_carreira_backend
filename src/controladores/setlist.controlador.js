@@ -1,5 +1,5 @@
 // src/controladores/setlist.controlador.js
-const { Op } = require('sequelize');
+const { Op, fn, col, literal } = require('sequelize'); // fn, col, e literal são necessários
 const { v4: uuidv4 } = require('uuid');
 const conquistaServico = require('../servicos/conquista.servico');
 const logService = require('../servicos/log.servico');
@@ -7,7 +7,6 @@ const logService = require('../servicos/log.servico');
 exports.estatisticas = async (req, res, conexao, next) => {
   const { Musica, Setlist, Compromisso, SetlistMusica } = conexao.models;
   const usuarioId = req.usuario.id;
-
   try {
     const anoAtual = new Date().getFullYear();
 
@@ -17,10 +16,8 @@ exports.estatisticas = async (req, res, conexao, next) => {
             usuario_id: usuarioId,
             tipo: 'Show',
             status: 'Realizado',
-            // Garante que estamos a olhar apenas para o ano atual
-            [Op.and]: [
-                fn('EXTRACT', col('data'), 'year') 
-            ]
+            // Usa a função EXTRACT do SQL para pegar o ano da data
+            [Op.and]: literal(`EXTRACT(YEAR FROM "data") = ${anoAtual}`)
         }
     });
 
@@ -34,9 +31,9 @@ exports.estatisticas = async (req, res, conexao, next) => {
             model: Setlist,
             as: 'setlist',
             where: { usuario_id: usuarioId },
-            attributes: [] // Não precisamos dos dados do setlist, apenas de filtrar por eles
+            attributes: []
         }],
-        group: ['musica_id', 'setlist.id'], // Agrupa pela música para contar
+        group: ['musica_id', 'setlist.id'], // Agrupa por música para contar
         order: [[col('contagem'), 'DESC']],
         limit: 1,
         raw: true
@@ -79,6 +76,7 @@ exports.estatisticas = async (req, res, conexao, next) => {
   }
 };
 
+// ... (Resto do ficheiro sem alterações: criar, listar, buscarPorId, etc.)
 exports.criar = async (req, res, conexao, next) => {
   const { Setlist } = conexao.models;
   const { nome } = req.body;
@@ -129,50 +127,6 @@ exports.buscarPorId = async (req, res, conexao, next) => {
       return res.status(404).json({ mensagem: "Setlist não encontrado." });
     }
 
-    // --- CORREÇÃO ROBUSTA ---
-    // Esta lógica verifica qual propriedade ('SetlistMusica' ou 'setlist_musicas')
-    // o Sequelize usou e ordena corretamente, evitando o erro.
-    if (setlist.musicas && setlist.musicas.length > 0) {
-        setlist.musicas.sort((a, b) => {
-            const ordemA = a.SetlistMusica?.ordem ?? a.setlist_musicas?.ordem ?? 0;
-            const ordemB = b.SetlistMusica?.ordem ?? b.setlist_musicas?.ordem ?? 0;
-            return ordemA - ordemB;
-        });
-    }
-
-    return res.status(200).json(setlist);
-  } catch (erro) {
-    next(erro);
-  }
-};
-
-exports.buscarPublicoPorUuid = async (req, res, conexao, next) => {
-  const { Setlist, Musica, Usuario } = conexao.models;
-  const { uuid } = req.params;
-
-  try {
-    const setlist = await Setlist.findOne({
-      where: { publico_uuid: uuid },
-      include: [
-        {
-          model: Musica,
-          as: 'musicas',
-          attributes: ['nome', 'artista'],
-          through: { attributes: ['ordem'] }
-        },
-        {
-          model: Usuario,
-          as: 'usuario',
-          attributes: ['nome']
-        }
-      ]
-    });
-
-    if (!setlist) {
-      return res.status(404).json({ mensagem: "Setlist público não encontrado." });
-    }
-    
-    // --- CORREÇÃO ROBUSTA APLICADA AQUI TAMBÉM ---
     if (setlist.musicas && setlist.musicas.length > 0) {
         setlist.musicas.sort((a, b) => {
             const ordemA = a.SetlistMusica?.ordem ?? a.setlist_musicas?.ordem ?? 0;
@@ -316,3 +270,42 @@ exports.gerirPartilha = async (req, res, conexao, next) => {
   }
 };
 
+exports.buscarPublicoPorUuid = async (req, res, conexao, next) => {
+  const { Setlist, Musica, Usuario } = conexao.models;
+  const { uuid } = req.params;
+
+  try {
+    const setlist = await Setlist.findOne({
+      where: { publico_uuid: uuid },
+      include: [
+        {
+          model: Musica,
+          as: 'musicas',
+          attributes: ['nome', 'artista'],
+          through: { attributes: ['ordem'] }
+        },
+        {
+          model: Usuario,
+          as: 'usuario',
+          attributes: ['nome']
+        }
+      ]
+    });
+
+    if (!setlist) {
+      return res.status(404).json({ mensagem: "Setlist público não encontrado." });
+    }
+    
+    if (setlist.musicas && setlist.musicas.length > 0) {
+        setlist.musicas.sort((a, b) => {
+            const ordemA = a.SetlistMusica?.ordem ?? a.setlist_musicas?.ordem ?? 0;
+            const ordemB = b.SetlistMusica?.ordem ?? b.setlist_musicas?.ordem ?? 0;
+            return ordemA - ordemB;
+        });
+    }
+
+    return res.status(200).json(setlist);
+  } catch (erro) {
+    next(erro);
+  }
+};
