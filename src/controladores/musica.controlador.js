@@ -182,3 +182,64 @@ exports.apagar = async (req, res, conexao, next) => {
         next(erro);
     }
 };
+
+exports.sincronizarComMestre = async (req, res, conexao, next) => {
+    const { Musica, Tag } = conexao.models;
+    const { id } = req.params; // ID da música do usuário
+    const usuarioId = req.usuario.id;
+    const t = await conexao.transaction();
+
+    try {
+        const musicaUsuario = await Musica.findOne({
+            where: { id, usuario_id: usuarioId },
+            transaction: t
+        });
+
+        if (!musicaUsuario) {
+            await t.rollback();
+            return res.status(404).json({ mensagem: "Música não encontrada no seu repertório." });
+        }
+
+        if (!musicaUsuario.master_id) {
+            await t.rollback();
+            return res.status(400).json({ mensagem: "Esta música não é uma cópia de uma música mestre e não pode ser sincronizada." });
+        }
+
+        const musicaMestre = await Musica.findOne({
+            where: { id: musicaUsuario.master_id, is_publica: true },
+            include: [{ model: Tag, as: 'tags' }], // Busca a música mestre com as suas tags
+            transaction: t
+        });
+
+        if (!musicaMestre) {
+            await t.rollback();
+            return res.status(404).json({ mensagem: "A música mestre original não foi encontrada ou não é mais pública." });
+        }
+
+        // Atualiza a cópia do usuário com os dados da mestre
+        await musicaUsuario.update({
+            nome: musicaMestre.nome,
+            artista: musicaMestre.artista,
+            tom: musicaMestre.tom,
+            bpm: musicaMestre.bpm,
+            duracao_minutos: musicaMestre.duracao_minutos,
+            link_cifra: musicaMestre.link_cifra,
+            notas_adicionais: musicaMestre.notas_adicionais
+        }, { transaction: t });
+
+        // Sincroniza as tags
+        if (musicaMestre.tags) {
+            const tagIds = musicaMestre.tags.map(tag => tag.id);
+            await musicaUsuario.setTags(tagIds, { transaction: t });
+        }
+
+        await t.commit();
+        
+        const musicaSincronizada = await Musica.findByPk(id, { include: ['tags'] });
+        return res.status(200).json(musicaSincronizada);
+
+    } catch (error) {
+        await t.rollback();
+        next(error);
+    }
+};

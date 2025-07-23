@@ -25,6 +25,9 @@ module.exports = (conexao) => {
 
   // Rota para criar uma sugestão para uma música específica
   roteador.post('/:musica_id/sugerir', (req, res) => sugestaoControlador.criarSugestao(req, res, conexao));
+
+  roteador.post('/:id/sincronizar', (req, res, next) => musicaControlador.sincronizarComMestre(req, res, conexao, next));
+  
   
   return roteador;
 };
