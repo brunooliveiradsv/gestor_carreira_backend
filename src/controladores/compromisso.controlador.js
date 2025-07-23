@@ -4,60 +4,72 @@ const conquistaServico = require("../servicos/conquista.servico.js");
 const compromissoServico = require("../servicos/compromisso.servico.js");
 const contratoServico = require("../servicos/contrato.servico.js");
 
-exports.criar = async (req, res, conexao) => {
+exports.criar = async (req, res, conexao, next) => {
   const { Compromisso } = conexao.models;
   const {
-    tipo,
-    nome_evento,
-    data,
-    local,
-    status,
-    valor_cache,
-    despesas,
-    repertorio_id,
+    tipo, nome_evento, data, local, valor_cache, despesas, setlist_id // <-- 'repertorio_id' alterado para 'setlist_id'
   } = req.body;
   const usuarioId = req.usuario.id;
-
-  const cacheParaSalvar =
-    valor_cache === "" || valor_cache === null ? null : valor_cache;
+  const cacheParaSalvar = valor_cache === "" || valor_cache === null ? null : valor_cache;
 
   try {
     const novoCompromisso = await Compromisso.create({
-      tipo,
-      nome_evento,
-      data,
-      local,
+      tipo, nome_evento, data, local,
       status: "Agendado",
       valor_cache: cacheParaSalvar,
       despesas,
-      repertorio_id,
+      setlist_id: setlist_id || null, // <-- Usa o novo campo
       usuario_id: usuarioId,
     });
 
-    conquistaServico.verificarEConcederConquistas(
-      usuarioId,
-      "PRIMEIRO_COMPROMISSO_CRIADO",
-      conexao
-    );
+    conquistaServico.verificarEConcederConquistas(usuarioId, "PRIMEIRO_COMPROMISSO_CRIADO", conexao);
 
     if (new Date(novoCompromisso.data) < new Date()) {
-      console.log(
-        `Compromisso ${novoCompromisso.id} criado no passado. Processando como 'Realizado'.`
-      );
       await novoCompromisso.update({ status: "Realizado" });
-      await compromissoServico.processarCompromissoRealizado(
-        novoCompromisso,
-        conexao
-      );
+      await compromissoServico.processarCompromissoRealizado(novoCompromisso, conexao);
       await novoCompromisso.reload();
     }
 
     return res.status(201).json(novoCompromisso);
   } catch (erro) {
-    console.error("Erro ao criar compromisso:", erro);
-    res
-      .status(400)
-      .json({ mensagem: "Erro ao criar compromisso.", detalhes: erro.message });
+    next(erro);
+  }
+};
+
+exports.atualizar = async (req, res, conexao, next) => {
+  const { Compromisso } = conexao.models;
+  const idDoCompromisso = parseInt(req.params.id, 10);
+  const usuarioId = req.usuario.id;
+  const novosDados = req.body;
+
+  if (novosDados.valor_cache === '' || novosDados.valor_cache === null) {
+    novosDados.valor_cache = null;
+  }
+  // Garante que o setlist_id é salvo corretamente
+  novosDados.setlist_id = novosDados.setlist_id || null;
+
+  try {
+    const compromisso = await Compromisso.findOne({ where: { id: idDoCompromisso, usuario_id: usuarioId }});
+    if (!compromisso) {
+      return res.status(404).json({ mensagem: "Compromisso não encontrado." });
+    }
+    
+    await compromisso.update(novosDados);
+
+    const dataAtualizada = new Date(compromisso.data);
+    const agora = new Date();
+    
+    if (novosDados.status === 'Realizado' || (dataAtualizada < agora && compromisso.status === 'Agendado')) {
+      if (compromisso.status === 'Agendado') {
+        await compromisso.update({ status: 'Realizado' });
+      }
+      compromissoServico.processarCompromissoRealizado(compromisso, conexao);
+    }
+
+    await compromisso.reload();
+    return res.status(200).json(compromisso);
+  } catch (erro) {
+    next(erro);
   }
 };
 
@@ -102,43 +114,6 @@ exports.buscarPorId = async (req, res, conexao) => {
   }
 };
 
-exports.atualizar = async (req, res, conexao) => {
-  const { Compromisso } = conexao.models;
-  const idDoCompromisso = parseInt(req.params.id, 10);
-  const usuarioId = req.usuario.id;
-  const novosDados = req.body;
-
-  if (novosDados.valor_cache === '' || novosDados.valor_cache === null) {
-    novosDados.valor_cache = null;
-  }
-
-  try {
-    const compromisso = await Compromisso.findOne({ where: { id: idDoCompromisso, usuario_id: usuarioId }});
-    if (!compromisso) {
-      return res.status(404).json({ mensagem: "Compromisso não encontrado ou não pertence ao usuário." });
-    }
-    
-    await compromisso.update(novosDados);
-
-    const dataAtualizada = new Date(compromisso.data);
-    const agora = new Date();
-    
-    if (novosDados.status === 'Realizado' || (dataAtualizada < agora && compromisso.status === 'Agendado')) {
-      if (compromisso.status === 'Agendado') {
-        await compromisso.update({ status: 'Realizado' });
-        console.log(`Compromisso ID ${compromisso.id} atualizado para 'Realizado' por ter data no passado.`);
-      }
-      compromissoServico.processarCompromissoRealizado(compromisso, conexao);
-    }
-
-    await compromisso.reload();
-    return res.status(200).json(compromisso);
-  } catch (erro) {
-    console.error("Erro ao atualizar compromisso:", erro);
-    res.status(400).json({ mensagem: "Erro ao atualizar compromisso.", detalhes: erro.message });
-  }
-};
-
 exports.apagar = async (req, res, conexao) => {
   const { Compromisso } = conexao.models;
   const idDoCompromisso = parseInt(req.params.id, 10);
@@ -159,7 +134,6 @@ exports.apagar = async (req, res, conexao) => {
   }
 };
 
-// --- NOVA FUNÇÃO PARA O DASHBOARD ---
 exports.proximos = async (req, res, conexao) => {
   const { Compromisso } = conexao.models;
   const usuarioId = req.usuario.id;
