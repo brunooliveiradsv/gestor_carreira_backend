@@ -1,8 +1,10 @@
 // .sequelizerc
 const path = require('path');
 
-// Carrega as variáveis de ambiente do arquivo .env ANTES de qualquer outra coisa
-require('dotenv').config(); 
+// --- AQUI ESTÁ A CORREÇÃO CRUCIAL ---
+// Carrega as variáveis de ambiente do arquivo .env ANTES de qualquer outra coisa.
+// Isto garante que o Sequelize terá acesso às credenciais da base de dados.
+require('dotenv').config();
 
 module.exports = {
   'config': path.resolve('src', 'config', 'database.js'),
