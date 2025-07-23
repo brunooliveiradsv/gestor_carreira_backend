@@ -75,14 +75,26 @@ exports.gerarContratoPDF = (compromisso, contratante, artista, stream) => {
   doc.fontSize(11).text(`${contratante.cidade_foro}, ${dataHoje}.`, { align: 'center' });
   doc.moveDown(3);
 
-  doc.text('______________________________________', { align: 'center' });
-  doc.text(contratante.nome, { align: 'center' });
-  doc.font('Helvetica-Bold').text('CONTRATANTE', { align: 'center' });
-  doc.moveDown(2);
+  // --- ASSINATURAS LADO A LADO ---
+  const margin = 72;
+  const page_width = doc.page.width - margin * 2;
+  const col_width = page_width / 2 - 20; // Largura de cada coluna de assinatura
+  const col1_x = margin;
+  const col2_x = margin + page_width / 2 + 20;
+  const sig_y = doc.y; // Pega a posição Y atual
 
-  doc.text('______________________________________', { align: 'center' });
-  doc.text(artista.nome, { align: 'center' });
-  doc.font('Helvetica-Bold').text('CONTRATADO', { align: 'center' });
+  // Coluna da Esquerda (Contratante)
+  doc.text('______________________________________', col1_x, sig_y, { width: col_width, align: 'center' });
+  doc.moveDown(0.5);
+  doc.text(contratante.nome, { width: col_width, align: 'center' });
+  doc.font('Helvetica-Bold').text('CONTRATANTE', { width: col_width, align: 'center' });
 
+  // Coluna da Direita (Contratado) - Usa a mesma posição Y
+  doc.font('Helvetica').text('______________________________________', col2_x, sig_y, { width: col_width, align: 'center' });
+  doc.moveDown(0.5);
+  doc.text(artista.nome, { width: col_width, align: 'center' });
+  doc.font('Helvetica-Bold').text('CONTRATADO', { width: col_width, align: 'center' });
+
+  // Finaliza o PDF
   doc.end();
 };
