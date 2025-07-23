@@ -1,8 +1,8 @@
 // src/controladores/setlist.controlador.js
 const { Op } = require('sequelize');
+const { v4: uuidv4 } = require('uuid');
 const conquistaServico = require('../servicos/conquista.servico');
 const logService = require('../servicos/log.servico');
-const { v4: uuidv4 } = require('uuid');
 
 exports.estatisticas = async (req, res, conexao, next) => {
   const { Musica, Setlist, Compromisso } = conexao.models;
@@ -84,7 +84,6 @@ exports.buscarPorId = async (req, res, conexao, next) => {
     next(erro);
   }
 };
-
 
 exports.atualizar = async (req, res, conexao, next) => {
   const { Setlist } = conexao.models;
@@ -191,7 +190,7 @@ exports.sugerirMusicas = async (req, res, conexao, next) => {
 exports.gerirPartilha = async (req, res, conexao, next) => {
   const { Setlist } = conexao.models;
   const { id } = req.params;
-  const { partilhar } = req.body; // true para ativar, false para desativar
+  const { partilhar } = req.body;
   const usuarioId = req.usuario.id;
 
   try {
@@ -201,12 +200,10 @@ exports.gerirPartilha = async (req, res, conexao, next) => {
     }
 
     if (partilhar) {
-      // Se for para partilhar e ainda não tiver um UUID, cria um
       if (!setlist.publico_uuid) {
         setlist.publico_uuid = uuidv4();
       }
     } else {
-      // Se for para parar de partilhar, apaga o UUID
       setlist.publico_uuid = null;
     }
 
@@ -217,7 +214,6 @@ exports.gerirPartilha = async (req, res, conexao, next) => {
   }
 };
 
-// --- NOVA FUNÇÃO PARA BUSCAR O SETLIST PÚBLICO ---
 exports.buscarPublicoPorUuid = async (req, res, conexao, next) => {
   const { Setlist, Musica, Usuario } = conexao.models;
   const { uuid } = req.params;
@@ -230,7 +226,7 @@ exports.buscarPublicoPorUuid = async (req, res, conexao, next) => {
           model: Musica,
           as: 'musicas',
           attributes: ['nome', 'artista'],
-          through: { attributes: ['ordem'] } // Pede o atributo 'ordem'
+          through: { attributes: ['ordem'] }
         },
         {
           model: Usuario,
@@ -238,14 +234,13 @@ exports.buscarPublicoPorUuid = async (req, res, conexao, next) => {
           attributes: ['nome']
         }
       ]
-      // A cláusula 'order' que causava o erro foi removida
     });
 
     if (!setlist) {
       return res.status(404).json({ mensagem: "Setlist público não encontrado." });
     }
-
-    // Ordena as músicas em JavaScript, da mesma forma que na função 'buscarPorId'
+    
+    // --- CORREÇÃO FINAL APLICADA AQUI TAMBÉM ---
     if (setlist.musicas && setlist.musicas.length > 0) {
         setlist.musicas.sort((a, b) => a.setlist_musicas.ordem - b.setlist_musicas.ordem);
     }
