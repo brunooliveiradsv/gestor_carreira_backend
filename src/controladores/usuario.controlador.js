@@ -268,22 +268,24 @@ exports.atualizarSenha = async (req, res, conexao, next) => {
 exports.atualizarFoto = async (req, res, conexao, next) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
+  const { foto_url: fotoUrlFromBody } = req.body; // Pega a URL do corpo da requisição
 
-  if (!req.file) {
-    return res.status(400).json({ mensagem: 'Nenhum ficheiro de imagem foi enviado.' });
+  // Prioriza o ficheiro enviado. Se não houver ficheiro, usa a URL do corpo.
+  const fotoUrlFinal = req.file ? req.file.path : fotoUrlFromBody;
+
+  if (!fotoUrlFinal) {
+    return res.status(400).json({ mensagem: 'Nenhum ficheiro ou URL de imagem foi fornecido.' });
   }
 
-  const fotoUrl = req.file.path; 
-
   try {
-    const [updated] = await Usuario.update({ foto_url: fotoUrl }, {
+    const [updated] = await Usuario.update({ foto_url: fotoUrlFinal }, {
       where: { id: usuarioId }
     });
 
     if (updated) {
       const usuarioAtualizado = await Usuario.findByPk(usuarioId, { attributes: { exclude: ['senha'] } });
       const perfil = usuarioAtualizado.get({ plain: true });
-      logService.registrarAcao(conexao, usuarioId, 'UPDATE_PROFILE_PICTURE', { new_url: fotoUrl });
+      logService.registrarAcao(conexao, usuarioId, 'UPDATE_PROFILE_PICTURE', { new_url: fotoUrlFinal });
       return res.status(200).json(perfil);
     }
     
@@ -292,6 +294,7 @@ exports.atualizarFoto = async (req, res, conexao, next) => {
     next(error);
   }
 };
+
 
 exports.atualizarFotosCapa = async (req, res, next) => {
   const { Usuario } = conexao.models;
