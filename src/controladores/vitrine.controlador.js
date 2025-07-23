@@ -2,8 +2,8 @@
 const { Op } = require("sequelize");
 const conquistaServico = require('../servicos/conquista.servico');
 
-exports.obterVitrine = async (req, res, conexao) => {
-    const { Usuario, Compromisso, Contato, Setlist, Musica, UsuarioConquista, Post } = conexao.models;
+exports.obterVitrine = async (req, res, conexao, next) => {
+    const { Usuario, Compromisso, Contato, Setlist, Musica, UsuarioConquista, Post, Enquete, EnqueteOpcao } = conexao.models;
     const { url_unica } = req.params;
 
     try {
@@ -36,24 +36,6 @@ exports.obterVitrine = async (req, res, conexao) => {
             attributes: ['nome', 'telefone', 'email', 'funcao']
         });
         
-        const setlistPublico = await Setlist.findOne({
-            where: { usuario_id: artista.id, publico: true },
-            attributes: ['nome', 'notas_adicionais'],
-            include: [{
-                model: Musica,
-                as: 'musicas',
-                attributes: ['nome', 'artista'],
-                through: { attributes: [] }
-            }]
-        });
-
-        const musicasPopulares = await Musica.findAll({
-            where: { usuario_id: artista.id },
-            order: [['popularidade', 'DESC']],
-            limit: 5,
-            attributes: ['nome', 'artista', 'popularidade']
-        });
-
         const totalShowsRealizados = await Compromisso.count({
             where: { usuario_id: artista.id, tipo: 'Show', status: 'Realizado' }
         });
@@ -75,26 +57,33 @@ exports.obterVitrine = async (req, res, conexao) => {
             order: [['created_at', 'DESC']],
             limit: 5
         });
+        
+        const enqueteAtiva = await Enquete.findOne({
+            where: { usuario_id: artista.id, ativa: true },
+            include: [{
+                model: EnqueteOpcao,
+                as: 'opcoes'
+            }],
+            order: [[{ model: EnqueteOpcao, as: 'opcoes' }, 'created_at', 'ASC']]
+        });
 
         const vitrine = {
             artista: artista.toJSON(),
             proximosShows,
             contatoPublico,
-            setlistPublico,
-            musicasPopulares,
             estatisticas,
             postsRecentes,
+            enqueteAtiva,
         };
 
         return res.status(200).json(vitrine);
 
     } catch (erro) {
-        console.error("Erro ao buscar dados da vitrine:", erro);
-        return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
+        next(erro);
     }
 };
 
-exports.registrarAplauso = async (req, res, conexao) => {
+exports.registrarAplauso = async (req, res, conexao, next) => {
     const { Usuario } = conexao.models;
     const { url_unica } = req.params;
 
@@ -106,18 +95,16 @@ exports.registrarAplauso = async (req, res, conexao) => {
 
         const novoTotal = await artista.increment('aplausos', { by: 1 });
         
-        // Aciona a verificação da conquista para o artista que recebeu o aplauso
         conquistaServico.verificarEConcederConquistas(artista.id, 'CONTAGEM_APLAUSOS', conexao);
 
         return res.status(200).json({ aplausos: novoTotal.aplausos });
         
     } catch (erro) {
-        console.error("Erro ao registar aplauso:", erro);
-        return res.status(500).json({ mensagem: "Não foi possível registar o aplauso." });
+        next(erro);
     }
 };
 
-exports.registrarReacaoPost = async (req, res, conexao) => {
+exports.registrarReacaoPost = async (req, res, conexao, next) => {
     const { Post } = conexao.models;
     const { id } = req.params;
     const { tipo } = req.body;
@@ -141,7 +128,6 @@ exports.registrarReacaoPost = async (req, res, conexao) => {
         return res.status(200).json({ mensagem: "Reação registada." });
         
     } catch (erro) {
-        console.error("Erro ao registar reação no post:", erro);
-        return res.status(500).json({ mensagem: "Não foi possível registar a reação." });
+        next(erro);
     }
 };
