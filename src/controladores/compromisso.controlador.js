@@ -80,6 +80,11 @@ exports.listar = async (req, res, conexao) => {
   try {
     const compromissos = await Compromisso.findAll({
       where: { usuario_id: usuarioId },
+        include: [{
+        model: Setlist,
+        as: 'setlist',
+        attributes: ['id', 'nome'] // Apenas os campos que precisamos
+      }],
       order: [["data", "DESC"]],
     });
     return res.status(200).json(compromissos);
@@ -90,7 +95,7 @@ exports.listar = async (req, res, conexao) => {
 };
 
 exports.buscarPorId = async (req, res, conexao) => {
-  const { Compromisso } = conexao.models;
+  const { Compromisso, Setlist } = conexao.models;
   const idDoCompromisso = parseInt(req.params.id, 10);
   const usuarioId = req.usuario.id;
 
@@ -101,6 +106,11 @@ exports.buscarPorId = async (req, res, conexao) => {
   try {
     const compromisso = await Compromisso.findOne({
       where: { id: idDoCompromisso, usuario_id: usuarioId },
+      include: [{
+        model: Setlist,
+        as: 'setlist',
+        attributes: ['id', 'nome']
+      }]
     });
 
     if (!compromisso) {
