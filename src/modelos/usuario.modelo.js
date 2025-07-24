@@ -13,7 +13,7 @@ class Usuario extends Model {
       url_unica: DataTypes.STRING,
       aplausos: DataTypes.INTEGER,
       links_redes: DataTypes.JSONB,
-      plano: DataTypes.ENUM('padrao', 'premium'),
+      plano: DataTypes.ENUM('free', 'padrao', 'premium'),
       status_assinatura: DataTypes.ENUM('inativa', 'ativa', 'teste', 'cancelada', 'inadimplente'),
       teste_termina_em: DataTypes.DATE,
        stripe_customer_id: DataTypes.STRING,

@@ -1,36 +1,46 @@
 // src/middlewares/assinatura.js
 
+// Define a hierarquia dos planos. Quanto maior o número, maior o nível.
+const HIERARQUIA_PLANOS = {
+  free: 0,
+  padrao: 1,
+  premium: 2,
+};
+
 /**
- * Middleware para verificar se o usuário possui uma assinatura ativa ou em teste.
- * Deve ser usado APÓS o middleware de autenticação.
+ * Middleware para verificar o nível de assinatura do utilizador.
+ * @param {('free'|'padrao'|'premium')} planoMinimo - O nível mínimo de plano necessário para aceder à rota.
  */
-module.exports = () => {
+module.exports = (planoMinimo = 'padrao') => {
   return (req, res, next) => {
     const usuario = req.usuario;
 
     if (!usuario) {
-      return res.status(401).json({ mensagem: "Acesso negado. Usuário não autenticado." });
+      return res.status(401).json({ mensagem: "Acesso negado. Utilizador não autenticado." });
     }
 
-    // Verifica se a assinatura está 'ativa'
-    if (usuario.status_assinatura === 'ativa') {
-      return next(); // Permite o acesso
-    }
+    const nivelUtilizador = HIERARQUIA_PLANOS[usuario.plano] ?? -1;
+    const nivelExigido = HIERARQUIA_PLANOS[planoMinimo];
 
-    // Verifica se está em 'teste' E se a data do teste ainda é válida
+    // Permite o acesso se o utilizador tiver um plano ativo com nível suficiente
+    if (usuario.status_assinatura === 'ativa' && nivelUtilizador >= nivelExigido) {
+      return next();
+    }
+    
+    // Permite o acesso se o utilizador estiver em período de teste (que geralmente é do plano premium)
     if (usuario.status_assinatura === 'teste') {
       const hoje = new Date();
       const dataTerminoTeste = new Date(usuario.teste_termina_em);
 
       if (dataTerminoTeste > hoje) {
-        return next(); // Permite o acesso, pois o teste ainda não acabou
+        return next();
       }
     }
 
-    // Se nenhuma das condições acima for atendida, o acesso é bloqueado.
-    return res.status(403).json({ 
-      mensagem: "Acesso negado. Esta funcionalidade requer uma assinatura ativa.",
-      assinaturaExpirada: true // Enviamos uma flag para o frontend saber o motivo
+    // Bloqueia o acesso se não cumprir os requisitos
+    return res.status(403).json({
+      mensagem: `Acesso negado. Esta funcionalidade requer, no mínimo, o Plano ${planoMinimo}.`,
+      upgradeNecessario: true
     });
   };
 };

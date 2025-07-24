@@ -10,39 +10,6 @@ const planosStripe = {
   premium_anual: process.env.STRIPE_PRICE_ID_PREMIUM_ANUAL,
 };
 
-exports.iniciarTesteGratuito = async (req, res, conexao) => {
-  const { Usuario } = conexao.models;
-  const usuarioId = req.usuario.id;
-
-  try {
-    const usuario = await Usuario.findByPk(usuarioId);
-
-    if (usuario.status_assinatura !== 'inativa' || usuario.teste_termina_em) {
-      return res.status(400).json({ mensagem: "Você não pode iniciar um novo período de teste." });
-    }
-
-    const dataTermino = new Date();
-    dataTermino.setDate(dataTermino.getDate() + 7);
-
-    await usuario.update({
-      plano: 'premium',
-      status_assinatura: 'teste',
-      teste_termina_em: dataTermino,
-    });
-    
-    const { senha, ...usuarioAtualizado } = usuario.get({ plain: true });
-
-    return res.status(200).json({
-      mensagem: "Teste de 7 dias do plano Premium iniciado com sucesso!",
-      usuario: usuarioAtualizado,
-    });
-
-  } catch (erro) {
-    console.error("Erro ao iniciar período de teste:", erro);
-    return res.status(500).json({ mensagem: "Ocorreu um erro no servidor." });
-  }
-};
-
 exports.criarSessaoCheckout = async (req, res, conexao) => {
   const { planoId } = req.body;
   const usuarioId = req.usuario.id;
@@ -84,7 +51,7 @@ exports.trocarPlano = async (req, res, conexao) => {
     if (usuario.status_assinatura !== 'ativa') {
       return res.status(403).json({ mensagem: "Apenas assinaturas ativas podem ser alteradas." });
     }
-    if (!novoPlano || (novoPlano !== 'padrao' && novoPlano !== 'premium')) {
+    if (!novoPlano || !['padrao', 'premium'].includes(novoPlano)) {
       return res.status(400).json({ mensagem: "Plano inválido." });
     }
     if (usuario.plano === novoPlano) {

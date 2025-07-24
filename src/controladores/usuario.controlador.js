@@ -64,19 +64,18 @@ exports.registrar = async (req, res, conexao, next) => {
       return res.status(400).json({ mensagem: 'Este e-mail já está em uso.' });
     }
 
-    const dataTerminoTeste = new Date();
-    dataTerminoTeste.setDate(dataTerminoTeste.getDate() + 7);
-
+    // --- LÓGICA DE REGISTO ALTERADA ---
     const senhaCriptografada = bcrypt.hashSync(senha, 10);
     const novoUsuario = await Usuario.create({
       nome, 
       email, 
       senha: senhaCriptografada, 
       role: 'usuario',
-      plano: 'premium',
-      status_assinatura: 'teste',
-      teste_termina_em: dataTerminoTeste
+      plano: 'free', // <--- NOVO PADRÃO
+      status_assinatura: 'ativa', // <--- O plano free já é 'ativo'
+      teste_termina_em: null // <--- Não há mais período de teste no registo
     });
+    // --- FIM DA ALTERAÇÃO ---
 
     const token = jwt.sign({ id: novoUsuario.id }, process.env.JWT_SECRET, { expiresIn: '8h' });
     const { senha: _, ...usuarioParaResposta } = novoUsuario.get({ plain: true });
