@@ -90,7 +90,8 @@ exports.calcularProgressoAtual = async (usuarioId, tipoCondicao, conexao) => {
     // --- NOVOS CASOS ADICIONADOS ---
     case "ASSINATURA_ATIVA":
       const userAssinatura = await Usuario.findByPk(usuarioId);
-      valorAtual = userAssinatura && userAssinatura.status_assinatura === 'ativa' ? 1 : 0;
+      // Agora, só conta se a assinatura for 'ativa' E o plano for 'padrao' ou 'premium'
+      valorAtual = userAssinatura && userAssinatura.status_assinatura === 'ativa' && (userAssinatura.plano === 'padrao' || userAssinatura.plano === 'premium') ? 1 : 0;
       break;
     case "PRIMEIRA_VITRINE_CRIADA":
       const userVitrine = await Usuario.findByPk(usuarioId);
