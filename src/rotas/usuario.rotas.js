@@ -6,6 +6,7 @@ const { storage } = require('../config/multerCloudinary');
 const usuarioControlador = require('../controladores/usuario.controlador');
 const authMiddleware = require('../middlewares/autenticacao');
 const validar = require('../middlewares/validador');
+const verificarPlano = require('../middlewares/verificarPlano');
 
 module.exports = (conexao) => {
   const roteador = express.Router();
