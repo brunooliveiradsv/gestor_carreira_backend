@@ -1,6 +1,7 @@
 // src/controladores/admin.controlador.js
 const bcrypt = require("bcryptjs");
 
+// ... (funções listarUsuarios, atualizarUsuario, apagarUsuario, limparDadosUsuario, criarUsuario) ...
 exports.listarUsuarios = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   try {
@@ -54,21 +55,20 @@ exports.apagarUsuario = async (req, res, conexao) => {
   }
 };
 
-// --- FUNÇÃO PRINCIPAL AGORA COM TODAS AS DELEÇÕES NECESSÁRIAS ---
 exports.limparDadosUsuario = async (req, res, conexao) => {
   const {
     Usuario,
     Compromisso,
     Transacao,
-    Contato,          // Adicionado para DESTRUIR Contatos
-    Setlist,          // Adicionado para DESTRUIR Setlists
+    Contato,
+    Setlist,
     UsuarioConquista,
     Equipamento,
     Musica,
     Post,
-    Notificacao,      // Adicionado para DESTRUIR Notificações
-    SugestaoMusica,   // Adicionado para DESTRUIR Sugestões (se a intenção for apagar)
-    ActivityLog       // Adicionado para DESTRUIR Logs de Atividade
+    Notificacao,
+    SugestaoMusica,
+    ActivityLog
   } = conexao.models;
   const { id } = req.params;
 
@@ -77,7 +77,6 @@ exports.limparDadosUsuario = async (req, res, conexao) => {
   try {
     console.log(`Iniciando limpeza de dados completa para o utilizador ID: ${id}`);
 
-    // Passo 1: Redefine as configurações da Vitrine na tabela de utilizadores
     await Usuario.update({
         biografia: null,
         url_unica: null,
@@ -87,7 +86,6 @@ exports.limparDadosUsuario = async (req, res, conexao) => {
         aplausos: 0
     }, { where: { id }, transaction: t });
 
-    // Passo 2: Apaga todos os dados transacionais e relacionados
     await Compromisso.destroy({ where: { usuario_id: id }, transaction: t });
     await Transacao.destroy({ where: { usuario_id: id }, transaction: t });
     await UsuarioConquista.destroy({ where: { usuario_id: id }, transaction: t });
@@ -95,12 +93,11 @@ exports.limparDadosUsuario = async (req, res, conexao) => {
     await Musica.destroy({ where: { usuario_id: id }, transaction: t });
     await Post.destroy({ where: { user_id: id }, transaction: t });
     
-    // --- NOVAS DELEÇÕES PARA GARANTIR LIMPEZA COMPLETA ---
-    await Contato.destroy({ where: { usuario_id: id }, transaction: t }); // Deleta todos os contatos do usuário
-    await Setlist.destroy({ where: { usuario_id: id }, transaction: t }); // Deleta todos os setlists do usuário
-    await Notificacao.destroy({ where: { usuario_id: id }, transaction: t }); // Deleta todas as notificações do usuário
-    await SugestaoMusica.destroy({ where: { usuario_id: id }, transaction: t }); // Deleta todas as sugestões feitas pelo usuário
-    await ActivityLog.destroy({ where: { user_id: id }, transaction: t }); // Deleta todos os logs de atividade do usuário
+    await Contato.destroy({ where: { usuario_id: id }, transaction: t });
+    await Setlist.destroy({ where: { usuario_id: id }, transaction: t });
+    await Notificacao.destroy({ where: { usuario_id: id }, transaction: t });
+    await SugestaoMusica.destroy({ where: { usuario_id: id }, transaction: t });
+    await ActivityLog.destroy({ where: { user_id: id }, transaction: t });
 
     await t.commit();
 
@@ -149,11 +146,12 @@ exports.criarUsuario = async (req, res, conexao) => {
   }
 };
 
-// --- NOVA FUNÇÃO PARA GERENCIAR ASSINATURAS ---
+
+// --- FUNÇÃO ATUALIZADA ---
 exports.gerenciarAssinatura = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const { id } = req.params;
-  const { acao, plano } = req.body; // 'acao' pode ser 'conceder' ou 'remover'
+  const { acao, plano } = req.body;
 
   try {
     const usuario = await Usuario.findByPk(id);
@@ -162,22 +160,27 @@ exports.gerenciarAssinatura = async (req, res, conexao) => {
     }
 
     if (acao === 'conceder') {
-      if (!plano || (plano !== 'padrao' && plano !== 'premium')) {
+      // Agora aceita 'free' como um plano válido
+      if (!plano || !['free', 'padrao', 'premium'].includes(plano)) {
         return res.status(400).json({ mensagem: 'Plano inválido especificado.' });
       }
+      
       usuario.plano = plano;
-      usuario.status_assinatura = 'ativa'; // Ou 'teste' se você quiser conceder um teste específico
-      usuario.teste_termina_em = null; // Remove a data de término de teste se um plano for concedido
+      // Se o plano for 'free', o status é 'ativa', mas sem ser uma assinatura paga
+      // Se for 'padrao' ou 'premium', também é 'ativa'
+      usuario.status_assinatura = 'ativa';
+      usuario.teste_termina_em = null;
       await usuario.save();
       return res.status(200).json({ mensagem: `Plano ${plano} concedido com sucesso para ${usuario.nome}.` });
+
     } else if (acao === 'remover') {
-      usuario.plano = null;
-      usuario.status_assinatura = 'inativa';
-      usuario.teste_termina_em = null; // Limpa a data de término de teste
-      // TODO: Se você tiver integração com Stripe ou outro serviço de pagamento,
-      // adicione aqui a lógica para cancelar a assinatura nesse serviço.
+      // Remover a assinatura agora significa voltar para o plano 'free'
+      usuario.plano = 'free';
+      usuario.status_assinatura = 'ativa'; // O plano free é sempre 'ativo'
+      usuario.teste_termina_em = null;
       await usuario.save();
-      return res.status(200).json({ mensagem: `Assinatura de ${usuario.nome} removida com sucesso.` });
+      return res.status(200).json({ mensagem: `Assinatura de ${usuario.nome} removida. O utilizador foi movido para o plano Free.` });
+    
     } else {
       return res.status(400).json({ mensagem: 'Ação de gerenciamento de assinatura inválida.' });
     }
