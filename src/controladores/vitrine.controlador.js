@@ -11,13 +11,22 @@ exports.obterVitrine = async (req, res, conexao, next) => {
             where: { url_unica },
             attributes: [
                 'id', 'nome', 'foto_url', 'biografia', 'aplausos', 'links_redes',
-                'foto_capa_url', 'video_destaque_url'
+                'foto_capa_url', 'video_destaque_url',
+                'plano' // Precisamos de obter o plano para verificação
             ]
         });
 
         if (!artista) {
             return res.status(404).json({ mensagem: "Página do artista não encontrada." });
         }
+        
+        // --- VERIFICAÇÃO DE PLANO ADICIONADA ---
+        // Se o artista for encontrado, mas o seu plano não for 'premium',
+        // a página não será exibida publicamente.
+        if (artista.plano !== 'premium') {
+            return res.status(404).json({ mensagem: "Página do artista não encontrada." });
+        }
+        // --- FIM DA VERIFICAÇÃO ---
         
         const proximosShows = await Compromisso.findAll({
             where: {
