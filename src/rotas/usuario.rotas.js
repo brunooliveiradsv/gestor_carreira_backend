@@ -29,7 +29,7 @@ module.exports = (conexao) => {
 
   // --- Rotas Privadas ---
   roteador.get('/perfil', (req, res, next) => usuarioControlador.buscarPerfil(req, res, conexao, next));
-  roteador.put('/perfil/nome', (req, res, next) => usuarioControlador.atualizarNome(req, res, conexao, next));
+   roteador.put('/perfil/nome', verificarPlano('premium'), (req, res, next) => usuarioControlador.atualizarNome(req, res, conexao, next));
   roteador.put('/perfil/email', (req, res, next) => usuarioControlador.atualizarEmail(req, res, conexao, next));
   roteador.put('/perfil/senha', (req, res, next) => usuarioControlador.atualizarSenha(req, res, conexao, next));
   roteador.put('/perfil/publico', (req, res, next) => usuarioControlador.atualizarPerfilPublico(req, res, conexao, next));
