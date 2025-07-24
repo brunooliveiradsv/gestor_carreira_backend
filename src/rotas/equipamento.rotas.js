@@ -2,15 +2,14 @@
 const express = require("express");
 const equipamentoControlador = require("../controladores/equipamento.controlador");
 const authMiddleware = require("../middlewares/autenticacao");
+const limiteRecurso = require('../middlewares/limiteRecurso');
 
 module.exports = (conexao) => {
   const roteador = express.Router();
 
   roteador.use(authMiddleware(conexao));
 
-  // --- ALTERAÇÕES AQUI ---
-  // Adicionamos 'next' e passamo-lo para as funções do controlador
-  roteador.post("/", (req, res, next) =>
+  roteador.post("/", limiteRecurso('equipamentos', conexao.models.Equipamento), (req, res, next) =>
     equipamentoControlador.criar(req, res, conexao, next)
   );
   roteador.get("/", (req, res, next) =>

@@ -7,6 +7,12 @@ const logService = require('../servicos/log.servico');
 const conquistaServico = require('../servicos/conquista.servico');
 
 exports.atualizarPerfilPublico = async (req, res, conexao, next) => {
+  if (req.usuario.plano !== 'premium') {
+    return res.status(403).json({ 
+      mensagem: "Apenas utilizadores do plano Premium podem ter uma página pública.",
+      upgradeNecessario: true
+    });
+  }
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
   const { biografia, url_unica, links_redes, video_destaque_url } = req.body;
@@ -64,18 +70,16 @@ exports.registrar = async (req, res, conexao, next) => {
       return res.status(400).json({ mensagem: 'Este e-mail já está em uso.' });
     }
 
-    // --- LÓGICA DE REGISTO ALTERADA ---
     const senhaCriptografada = bcrypt.hashSync(senha, 10);
     const novoUsuario = await Usuario.create({
       nome, 
       email, 
       senha: senhaCriptografada, 
       role: 'usuario',
-      plano: 'free', // <--- NOVO PADRÃO
-      status_assinatura: 'ativa', // <--- O plano free já é 'ativo'
-      teste_termina_em: null // <--- Não há mais período de teste no registo
+      plano: 'free',
+      status_assinatura: 'ativa',
+      teste_termina_em: null
     });
-    // --- FIM DA ALTERAÇÃO ---
 
     const token = jwt.sign({ id: novoUsuario.id }, process.env.JWT_SECRET, { expiresIn: '8h' });
     const { senha: _, ...usuarioParaResposta } = novoUsuario.get({ plain: true });

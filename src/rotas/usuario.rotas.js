@@ -10,7 +10,6 @@ const validar = require('../middlewares/validador');
 module.exports = (conexao) => {
   const roteador = express.Router();
   
-  // Configuração do Multer para diferentes rotas
   const uploadFotoPerfil = multer({ storage: storage }).single('foto');
   const uploadFotosCapa = multer({ storage: storage }).array('capas', 3);
 
@@ -35,10 +34,8 @@ module.exports = (conexao) => {
   roteador.put('/perfil/senha', (req, res, next) => usuarioControlador.atualizarSenha(req, res, conexao, next));
   roteador.put('/perfil/publico', (req, res, next) => usuarioControlador.atualizarPerfilPublico(req, res, conexao, next));
   
-  // Rota para foto de perfil (aceita ficheiro ou URL no corpo)
   roteador.put('/perfil/foto', uploadFotoPerfil, (req, res, next) => usuarioControlador.atualizarFoto(req, res, conexao, next));
   
-  // Nova rota para múltiplas fotos de capa
   roteador.put('/perfil/capas', uploadFotosCapa, (req, res, next) => usuarioControlador.atualizarFotosCapa(req, res, conexao, next));
 
   return roteador;

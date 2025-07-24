@@ -2,12 +2,13 @@
 const express = require('express');
 const contatoControlador = require('../controladores/contato.controlador');
 const authMiddleware = require('../middlewares/autenticacao');
+const limiteRecurso = require('../middlewares/limiteRecurso');
 
 module.exports = (conexao) => {
   const roteador = express.Router();
   roteador.use(authMiddleware(conexao));
 
-  roteador.post('/', (req, res) => contatoControlador.criar(req, res, conexao));
+  roteador.post('/', limiteRecurso('contatos', conexao.models.Contato), (req, res) => contatoControlador.criar(req, res, conexao));
   roteador.get('/', (req, res) => contatoControlador.listar(req, res, conexao));
   roteador.get('/:id', (req, res) => contatoControlador.buscarPorId(req, res, conexao));
   roteador.put('/:id', (req, res) => contatoControlador.atualizar(req, res, conexao));

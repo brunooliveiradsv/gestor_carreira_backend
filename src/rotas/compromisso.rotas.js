@@ -2,6 +2,7 @@
 const express = require('express');
 const compromissoControlador = require('../controladores/compromisso.controlador');
 const authMiddleware = require('../middlewares/autenticacao');
+const verificarPlano = require('../middlewares/verificarPlano');
 
 module.exports = (conexao) => {
   const roteador = express.Router();
@@ -21,7 +22,7 @@ module.exports = (conexao) => {
 
   roteador.delete('/:id', (req, res) => compromissoControlador.apagar(req, res, conexao));
   
-roteador.post('/:id/gerar-contrato', (req, res, next) => compromissoControlador.gerarContrato(req, res, conexao, next));
+  roteador.post('/:id/gerar-contrato', verificarPlano('premium'), (req, res, next) => compromissoControlador.gerarContrato(req, res, conexao, next));
   
 
   return roteador;
