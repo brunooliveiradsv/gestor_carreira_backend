@@ -113,4 +113,63 @@ describe('Testes das Rotas de Compromissos', () => {
         expect.anything()
     );
   });
+
+  it('Deve atualizar um compromisso existente', async () => {
+    // 1. Cria um compromisso
+    const compromissoRes = await request(app)
+      .post('/api/compromissos')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'Show', nome_evento: 'Nome Antigo', data: new Date() });
+    
+    const compromissoId = compromissoRes.body.id;
+
+    // 2. Envia os dados para atualização
+    const dadosAtualizados = {
+      nome_evento: 'Nome Novo e Atualizado',
+      status: 'Realizado'
+    };
+
+    const response = await request(app)
+      .put(`/api/compromissos/${compromissoId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send(dadosAtualizados);
+
+    // 3. Verifica a resposta
+    expect(response.status).toBe(200);
+    expect(response.body.nome_evento).toBe(dadosAtualizados.nome_evento);
+    expect(response.body.status).toBe('Realizado');
+  });
+
+  it('Deve apagar um compromisso existente', async () => {
+    // 1. Cria um compromisso
+    const compromissoRes = await request(app)
+      .post('/api/compromissos')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'Ensaio', nome_evento: 'Ensaio para Apagar', data: new Date() });
+    
+    const compromissoId = compromissoRes.body.id;
+
+    // 2. Envia a requisição para apagar
+    const deleteResponse = await request(app)
+      .delete(`/api/compromissos/${compromissoId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(deleteResponse.status).toBe(204);
+
+    // 3. Tenta buscar o compromisso apagado para confirmar que não existe mais
+    const getResponse = await request(app)
+      .get(`/api/compromissos/${compromissoId}`)
+      .set('Authorization', `Bearer ${token}`);
+    
+    expect(getResponse.status).toBe(404);
+  });
+
+  it('Deve retornar 404 ao tentar atualizar um compromisso que não existe', async () => {
+    const response = await request(app)
+      .put('/api/compromissos/9999') // ID que não existe
+      .set('Authorization', `Bearer ${token}`)
+      .send({ nome_evento: 'Qualquer Nome' });
+
+    expect(response.status).toBe(404);
+  });
 });

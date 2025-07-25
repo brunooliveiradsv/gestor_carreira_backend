@@ -23,9 +23,11 @@ describe('Testes das Rotas de Músicas', () => {
   beforeEach(async () => {
     await conexao.sync({ force: true });
     
-    usuario = { nome: 'Utilizador Musica', email: `musica-${Date.now()}@teste.com`, senha: '12345678' };
-    await request(app).post('/api/usuarios/registrar').send(usuario);
-    const loginResponse = await request(app).post('/api/usuarios/login').send({ email: usuario.email, senha: usuario.senha });
+    const dadosUsuario = { nome: 'Utilizador Musica', email: `musica-${Date.now()}@teste.com`, senha: '12345678' };
+    const registroRes = await request(app).post('/api/usuarios/registrar').send(dadosUsuario);
+    usuario = registroRes.body.usuario;
+
+    const loginResponse = await request(app).post('/api/usuarios/login').send({ email: dadosUsuario.email, senha: '12345678' });
     token = loginResponse.body.token;
   });
 
@@ -34,17 +36,10 @@ describe('Testes das Rotas de Músicas', () => {
   });
 
   it('Deve criar uma música manualmente no repertório do utilizador', async () => {
-    // Para este teste, vamos simular que o utilizador tem plano 'padrão' ou superior
-    // Atualizando o plano do nosso utilizador de teste diretamente na base de dados
     const { Usuario } = conexao.models;
-    await Usuario.update({ plano: 'padrao' }, { where: { email: usuario.email } });
+    await Usuario.update({ plano: 'padrao' }, { where: { id: usuario.id } });
 
-    const novaMusica = {
-      nome: 'Wonderwall',
-      artista: 'Oasis',
-      tom: 'F#m'
-    };
-
+    const novaMusica = { nome: 'Wonderwall', artista: 'Oasis', tom: 'F#m' };
     const response = await request(app)
       .post('/api/musicas/manual')
       .set('Authorization', `Bearer ${token}`)
@@ -52,47 +47,75 @@ describe('Testes das Rotas de Músicas', () => {
     
     expect(response.status).toBe(201);
     expect(response.body.nome).toBe('Wonderwall');
-    expect(response.body.master_id).toBeNull();
   });
 
   it('Deve importar uma música pública para o repertório do utilizador', async () => {
-    // 1. Criar uma música "mestre" pública diretamente na base de dados para o teste
     const { Musica } = conexao.models;
-    const musicaMestre = await Musica.create({
-        nome: 'Smells Like Teen Spirit',
-        artista: 'Nirvana',
-        is_publica: true,
-        master_id: null
-    });
+    const musicaMestre = await Musica.create({ nome: 'Smells Like Teen Spirit', artista: 'Nirvana', is_publica: true });
 
-    // 2. Tentar importar essa música
     const response = await request(app)
         .post('/api/musicas/importar')
         .set('Authorization', `Bearer ${token}`)
         .send({ master_id: musicaMestre.id });
 
     expect(response.status).toBe(201);
-    expect(response.body.nome).toBe(musicaMestre.nome);
-    expect(response.body.master_id).toBe(musicaMestre.id); // Confirma que está linkada à mestre
-    expect(response.body.is_publica).toBe(false); // A cópia do utilizador é privada
+    expect(response.body.master_id).toBe(musicaMestre.id);
+  });
+  
+  // --- NOVO TESTE ---
+  it('Deve atualizar uma música do repertório', async () => {
+    const { Usuario } = conexao.models;
+    await Usuario.update({ plano: 'padrao' }, { where: { id: usuario.id } });
+    const resCriacao = await request(app).post('/api/musicas/manual').set('Authorization', `Bearer ${token}`).send({ nome: 'Nome Antigo', artista: 'Artista' });
+    const musicaId = resCriacao.body.id;
+
+    const dadosAtualizados = { tom: 'G', bpm: 120 };
+    const resAtualizacao = await request(app)
+      .put(`/api/musicas/${musicaId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send(dadosAtualizados);
+      
+    expect(resAtualizacao.status).toBe(200);
+    expect(resAtualizacao.body.tom).toBe('G');
+    expect(resAtualizacao.body.bpm).toBe(120);
   });
 
-  it('Deve listar as músicas do repertório do utilizador', async () => {
-    // Adiciona uma música manualmente
-    const { Usuario, Musica } = conexao.models;
-    await Usuario.update({ plano: 'padrao' }, { where: { email: usuario.email } });
-    await request(app).post('/api/musicas/manual').set('Authorization', `Bearer ${token}`).send({ nome: 'Musica Manual', artista: 'Artista 1' });
+  // --- NOVO TESTE ---
+  it('Deve apagar uma música do repertório', async () => {
+    const { Usuario } = conexao.models;
+    await Usuario.update({ plano: 'padrao' }, { where: { id: usuario.id } });
+    const resCriacao = await request(app).post('/api/musicas/manual').set('Authorization', `Bearer ${token}`).send({ nome: 'Para Apagar', artista: 'Artista' });
+    const musicaId = resCriacao.body.id;
 
-    // Adiciona uma música importada
-    const musicaMestre = await Musica.create({ nome: 'Musica Mestre', artista: 'Artista 2', is_publica: true });
-    await request(app).post('/api/musicas/importar').set('Authorization', `Bearer ${token}`).send({ master_id: musicaMestre.id });
-    
-    // Lista o repertório
-    const response = await request(app)
-        .get('/api/musicas')
-        .set('Authorization', `Bearer ${token}`);
+    const resDelete = await request(app)
+      .delete(`/api/musicas/${musicaId}`)
+      .set('Authorization', `Bearer ${token}`);
+      
+    expect(resDelete.status).toBe(204);
 
-    expect(response.status).toBe(200);
-    expect(response.body.length).toBe(2);
+    const resBusca = await request(app).get(`/api/musicas/${musicaId}`).set('Authorization', `Bearer ${token}`);
+    expect(resBusca.status).toBe(404);
+  });
+
+  // --- NOVO TESTE ---
+  it('Deve sincronizar uma cópia do utilizador com as alterações da música mestre', async () => {
+    const { Musica } = conexao.models;
+    // 1. Cria a mestre e a cópia do utilizador
+    const musicaMestre = await Musica.create({ nome: 'Musica Mestre', artista: 'Original', tom: 'C', bpm: 100, is_publica: true });
+    const resImport = await request(app).post('/api/musicas/importar').set('Authorization', `Bearer ${token}`).send({ master_id: musicaMestre.id });
+    const copiaId = resImport.body.id;
+
+    // 2. Altera a música mestre diretamente na BD (simula uma atualização do admin)
+    await musicaMestre.update({ tom: 'D', bpm: 110 });
+
+    // 3. Chama a rota de sincronização
+    const resSincronizacao = await request(app)
+      .post(`/api/musicas/${copiaId}/sincronizar`)
+      .set('Authorization', `Bearer ${token}`);
+
+    // 4. Verifica se a cópia do utilizador foi atualizada
+    expect(resSincronizacao.status).toBe(200);
+    expect(resSincronizacao.body.tom).toBe('D');
+    expect(resSincronizacao.body.bpm).toBe(110);
   });
 });

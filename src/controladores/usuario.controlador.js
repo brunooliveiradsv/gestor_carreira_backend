@@ -258,12 +258,18 @@ exports.atualizarSenha = async (req, res, conexao, next) => {
 exports.atualizarFoto = async (req, res, conexao, next) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
-  const { foto_url: fotoUrlFromBody } = req.body;
-
-  const fotoUrlFinal = req.file ? req.file.path : fotoUrlFromBody;
+  
+  // --- CORREÇÃO AQUI ---
+  // Em vez de depender do req.body, que pode estar vazio em uploads,
+  // verificamos diretamente se req.file (do multer) existe.
+  const fotoUrlFinal = req.file ? req.file.path : null;
 
   if (!fotoUrlFinal) {
-    return res.status(400).json({ mensagem: 'Nenhum ficheiro ou URL de imagem foi fornecido.' });
+    // A lógica original para lidar com a ausência de um ficheiro
+    const { foto_url: fotoUrlFromBody } = req.body || {};
+    if (!fotoUrlFromBody) {
+        return res.status(400).json({ mensagem: 'Nenhum ficheiro ou URL de imagem foi fornecido.' });
+    }
   }
 
   try {

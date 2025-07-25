@@ -1,5 +1,6 @@
 // src/servicos/compromisso.servico.js
 const conquistaServico = require('./conquista.servico.js');
+const { Op } = require('sequelize');
 
 exports.processarCompromissoRealizado = async (compromisso, conexao) => {
   const { Transacao, Setlist, Musica, SetlistMusica } = conexao.models;
