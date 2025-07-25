@@ -32,11 +32,13 @@ exports.criarTransacao = async (req, res, conexao, next) => {
       usuario_id: usuarioId,
     });
 
+    // --- CORREÇÕES AQUI ---
+    // Adiciona 'await' para garantir que as verificações terminem antes de continuar.
     if (tipo === "despesa" && categoria === "Equipamento") {
-      conquistaServico.verificarEConcederConquistas(usuarioId, "PRIMEIRA_DESPESA_EQUIPAMENTO", conexao);
+      await conquistaServico.verificarEConcederConquistas(usuarioId, "PRIMEIRA_DESPESA_EQUIPAMENTO", conexao);
     }
     if (tipo === "receita" && compromisso_id) {
-      conquistaServico.verificarEConcederConquistas(usuarioId, "PRIMEIRA_RECEITA_SHOW", conexao);
+      await conquistaServico.verificarEConcederConquistas(usuarioId, "PRIMEIRA_RECEITA_SHOW", conexao);
     }
 
     return res.status(201).json(novaTransacao);
