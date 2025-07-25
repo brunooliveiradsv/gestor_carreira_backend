@@ -35,7 +35,7 @@ describe('Testes das Rotas de Músicas', () => {
     await conexao.close();
   });
 
-  it('Deve criar uma música manualmente no repertório do utilizador', async () => {
+  it('Deve criar uma música manualmente', async () => {
     const { Usuario } = conexao.models;
     await Usuario.update({ plano: 'padrao' }, { where: { id: usuario.id } });
 
@@ -49,7 +49,7 @@ describe('Testes das Rotas de Músicas', () => {
     expect(response.body.nome).toBe('Wonderwall');
   });
 
-  it('Deve importar uma música pública para o repertório do utilizador', async () => {
+  it('Deve importar uma música pública', async () => {
     const { Musica } = conexao.models;
     const musicaMestre = await Musica.create({ nome: 'Smells Like Teen Spirit', artista: 'Nirvana', is_publica: true });
 
@@ -62,7 +62,8 @@ describe('Testes das Rotas de Músicas', () => {
     expect(response.body.master_id).toBe(musicaMestre.id);
   });
   
-  // --- NOVO TESTE ---
+  // --- NOVOS TESTES ADICIONADOS ---
+
   it('Deve atualizar uma música do repertório', async () => {
     const { Usuario } = conexao.models;
     await Usuario.update({ plano: 'padrao' }, { where: { id: usuario.id } });
@@ -80,7 +81,6 @@ describe('Testes das Rotas de Músicas', () => {
     expect(resAtualizacao.body.bpm).toBe(120);
   });
 
-  // --- NOVO TESTE ---
   it('Deve apagar uma música do repertório', async () => {
     const { Usuario } = conexao.models;
     await Usuario.update({ plano: 'padrao' }, { where: { id: usuario.id } });
@@ -97,15 +97,14 @@ describe('Testes das Rotas de Músicas', () => {
     expect(resBusca.status).toBe(404);
   });
 
-  // --- NOVO TESTE ---
-  it('Deve sincronizar uma cópia do utilizador com as alterações da música mestre', async () => {
+  it('Deve sincronizar uma cópia com as alterações da música mestre', async () => {
     const { Musica } = conexao.models;
-    // 1. Cria a mestre e a cópia do utilizador
-    const musicaMestre = await Musica.create({ nome: 'Musica Mestre', artista: 'Original', tom: 'C', bpm: 100, is_publica: true });
+    // 1. Cria a mestre e a cópia
+    const musicaMestre = await Musica.create({ nome: 'Mestre', artista: 'Original', tom: 'C', bpm: 100, is_publica: true });
     const resImport = await request(app).post('/api/musicas/importar').set('Authorization', `Bearer ${token}`).send({ master_id: musicaMestre.id });
     const copiaId = resImport.body.id;
 
-    // 2. Altera a música mestre diretamente na BD (simula uma atualização do admin)
+    // 2. Altera a música mestre
     await musicaMestre.update({ tom: 'D', bpm: 110 });
 
     // 3. Chama a rota de sincronização
@@ -113,7 +112,7 @@ describe('Testes das Rotas de Músicas', () => {
       .post(`/api/musicas/${copiaId}/sincronizar`)
       .set('Authorization', `Bearer ${token}`);
 
-    // 4. Verifica se a cópia do utilizador foi atualizada
+    // 4. Verifica se a cópia foi atualizada
     expect(resSincronizacao.status).toBe(200);
     expect(resSincronizacao.body.tom).toBe('D');
     expect(resSincronizacao.body.bpm).toBe(110);
