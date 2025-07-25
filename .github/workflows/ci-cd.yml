@@ -1,0 +1,57 @@
+# .github/workflows/ci-cd.yml
+
+# Nome do workflow que aparecerá na aba "Actions" do seu repositório no GitHub
+name: CI/CD - Teste e Deploy do Backend
+
+# Define o gatilho (trigger) para este workflow
+on:
+  push:
+    # Executa apenas para pushes na branch 'main'. Mude para 'master' se for o seu caso.
+    branches: [ main ]
+
+# Define os trabalhos (jobs) a serem executados
+jobs:
+  # O nosso job chama-se 'build-test-deploy'
+  build-test-deploy:
+    # O tipo de máquina virtual que será usada. 'ubuntu-latest' é uma boa escolha padrão.
+    runs-on: ubuntu-latest
+
+    # Os passos que o nosso job irá executar em sequência
+    steps:
+      # 1. Checkout do código
+      # Descarrega o código do seu repositório para a máquina virtual
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      # 2. Configurar o ambiente Node.js
+      # Instala a versão do Node.js que a sua aplicação usa
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18' # Use a versão do Node.js do seu ambiente
+
+      # 3. Instalar as dependências
+      # Usa 'npm ci' que é mais rápido e seguro para ambientes de automação do que 'npm install'
+      - name: Instalar Dependências
+        run: npm ci
+
+      # 4. Executar os Testes (A parte de CI)
+      # Executa a sua suíte de testes completa. O job falhará aqui se algum teste falhar.
+      - name: Executar Testes Automatizados
+        run: npm test
+
+      # 5. Fazer o Deploy para o Servidor (A parte de CD)
+      # Este passo só será executado se todos os passos anteriores (incluindo os testes) forem bem-sucedidos.
+      # NOTA: Esta é uma implementação genérica usando SSH. Adapte para o seu provedor de alojamento.
+      - name: Deploy para Servidor de Produção
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}         # O endereço IP ou domínio do seu servidor
+          username: ${{ secrets.DEPLOY_USER }}     # O utilizador para login SSH (ex: ubuntu, root)
+          key: ${{ secrets.DEPLOY_KEY }}          # A sua chave privada SSH para acesso sem senha
+          port: ${{ secrets.DEPLOY_PORT || 22 }}   # A porta SSH (padrão é 22)
+          script: |
+            cd /caminho/para/seu/projeto/no/servidor
+            git pull origin main
+            npm install --production
+            pm2 restart nome_da_sua_app # Exemplo usando PM2 para reiniciar a aplicação sem downtime
