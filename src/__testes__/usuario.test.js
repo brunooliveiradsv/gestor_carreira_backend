@@ -83,5 +83,86 @@ describe('Testes das Rotas de Usuário', () => {
   });
   
   // Adicione mais testes aqui para login, recuperação de senha, etc.
+   // Teste de login com sucesso
+  it('Deve autenticar um utilizador com credenciais válidas', async () => {
+    const dadosUsuario = {
+      nome: 'Utilizador Login',
+      email: 'login@email.com',
+      senha: 'password123',
+    };
+    // Primeiro, regista o utilizador para garantir que ele existe
+    await request(app).post('/api/usuarios/registrar').send(dadosUsuario);
+
+    // Agora, tenta fazer login
+    const response = await request(app)
+      .post('/api/usuarios/login')
+      .send({
+        email: dadosUsuario.email,
+        senha: dadosUsuario.senha,
+      });
+
+    // Asserções
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('token');
+    expect(response.body.usuario.email).toBe(dadosUsuario.email);
+  });
+
+  // Teste de login com senha incorreta
+  it('Não deve autenticar um utilizador com senha incorreta', async () => {
+    const dadosUsuario = {
+      nome: 'Utilizador Senha Errada',
+      email: 'senhaerrada@email.com',
+      senha: 'senhaCorreta123',
+    };
+    await request(app).post('/api/usuarios/registrar').send(dadosUsuario);
+
+    const response = await request(app)
+      .post('/api/usuarios/login')
+      .send({
+        email: dadosUsuario.email,
+        senha: 'senhaINCORRETA', // Tenta com a senha errada
+      });
+
+    expect(response.status).toBe(401);
+    expect(response.body.mensagem).toBe('Senha inválida.');
+  });
+
+   // --- Testes para Rotas Protegidas ---
+
+  it('Deve retornar os dados do perfil para um utilizador autenticado', async () => {
+    // 1. Precisamos de um utilizador e de um token
+    const dadosUsuario = {
+      nome: 'Utilizador Perfil',
+      email: 'perfil@email.com',
+      senha: 'password123',
+    };
+    await request(app).post('/api/usuarios/registrar').send(dadosUsuario);
+
+    const loginResponse = await request(app)
+      .post('/api/usuarios/login')
+      .send({ email: dadosUsuario.email, senha: dadosUsuario.senha });
+
+    const token = loginResponse.body.token; // Guardamos o token
+
+    // 2. Fazemos a requisição para a rota protegida, enviando o token
+    const perfilResponse = await request(app)
+      .get('/api/usuarios/perfil')
+      .set('Authorization', `Bearer ${token}`); // Adicionamos o token ao cabeçalho
+
+    // 3. Asserções
+    expect(perfilResponse.status).toBe(200);
+    expect(perfilResponse.body.email).toBe(dadosUsuario.email);
+    expect(perfilResponse.body.nome).toBe(dadosUsuario.nome);
+  });
+
+  it('Não deve retornar os dados do perfil se o token não for fornecido', async () => {
+    // Tentamos aceder à rota sem o cabeçalho de autorização
+    const response = await request(app).get('/api/usuarios/perfil');
+
+    // Asserções
+    expect(response.status).toBe(401); // Esperamos "Unauthorized"
+    expect(response.body.mensagem).toBe('Token não fornecido.');
+  });
+  
 
 });

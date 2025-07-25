@@ -102,11 +102,17 @@ exports.registrarAplauso = async (req, res, conexao, next) => {
             return res.status(404).json({ mensagem: "Artista não encontrado." });
         }
 
-        const novoTotal = await artista.increment('aplausos', { by: 1 });
+        // 1. Espera (await) que a operação de incremento termine.
+        await artista.increment('aplausos', { by: 1 });
         
-        conquistaServico.verificarEConcederConquistas(artista.id, 'CONTAGEM_APLAUSOS', conexao);
+        // 2. Espera (await) pela verificação da conquista. Isto impede o erro 'Database handle is closed'.
+        await conquistaServico.verificarEConcederConquistas(artista.id, 'CONTAGEM_APLAUSOS', conexao);
 
-        return res.status(200).json({ aplausos: novoTotal.aplausos });
+        // 3. Recarrega os dados do artista para obter o valor atualizado.
+        await artista.reload();
+
+        // 4. Envia a resposta com o valor correto e atualizado.
+        return res.status(200).json({ aplausos: artista.aplausos });
         
     } catch (erro) {
         next(erro);
