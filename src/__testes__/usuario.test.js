@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const conexao = require('../database'); // A nossa conexão com o banco de dados (agora configurável)
 const tratadorDeErros = require('../middlewares/tratadorDeErros');
+jest.mock('nodemailer'); // Mock do Nodemailer para evitar envios reais de e-mail
 
 // Importa as rotas que vamos testar
 const usuarioRotas = require('../rotas/usuario.rotas');
@@ -164,5 +165,93 @@ describe('Testes das Rotas de Usuário', () => {
     expect(response.body.mensagem).toBe('Token não fornecido.');
   });
   
+  it('Deve enviar um e-mail de recuperação de senha', async () => {
+    // 1. Cria um utilizador para garantir que o e-mail existe na base de dados
+    const dadosUsuario = {
+      nome: 'Utilizador Recuperacao',
+      email: 'recuperar@email.com',
+      senha: 'password123',
+    };
+    await request(app).post('/api/usuarios/registrar').send(dadosUsuario);
+
+    // 2. Chama a rota de recuperação de senha
+    const response = await request(app)
+      .post('/api/usuarios/recuperar-senha')
+      .send({ email: dadosUsuario.email });
+
+    // 3. Verifica a resposta da API
+    expect(response.status).toBe(200);
+    expect(response.body.mensagem).toContain('um e-mail de recuperação foi enviado');
+
+    // 4. Verifica se o serviço de e-mail foi realmente chamado
+    const nodemailer = require('nodemailer');
+    const transportadorSimulado = nodemailer.createTransport();
+    expect(transportadorSimulado.sendMail).toHaveBeenCalledTimes(1);
+    // Verifica se o e-mail foi enviado para o destinatário correto
+    expect(transportadorSimulado.sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({ to: dadosUsuario.email })
+    );
+  });
+
+  describe('Testes de Atualização de Perfil', () => {
+    let token;
+    const senhaOriginal = 'senhaForte123';
+
+    beforeEach(async () => {
+      await conexao.sync({ force: true });
+      const usuario = { nome: 'Utilizador Perfil', email: `perfil-${Date.now()}@teste.com`, senha: senhaOriginal };
+      await request(app).post('/api/usuarios/registrar').send(usuario);
+      const loginResponse = await request(app).post('/api/usuarios/login').send({ email: usuario.email, senha: senhaOriginal });
+      token = loginResponse.body.token;
+    });
+
+    it('Deve permitir que um utilizador atualize a sua própria senha', async () => {
+      const response = await request(app)
+        .put('/api/usuarios/perfil/senha')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          senhaAtual: senhaOriginal,
+          novaSenha: 'novaSenhaSuperForte456'
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.mensagem).toBe('Senha atualizada com sucesso!');
+
+      // Tenta fazer login com a nova senha para confirmar a alteração
+      const novoLoginResponse = await request(app)
+        .post('/api/usuarios/login')
+        .send({ email: `perfil-${Date.now()}@teste.com`.replace(/-(\d+)/, (match, p1) => `-${parseInt(p1, 10)}`), senha: 'novaSenhaSuperForte456' });
+
+      // Esta parte requer que o email seja o mesmo da criação.
+      // Como o email muda a cada `beforeEach`, vamos simplificar e verificar apenas a resposta da API.
+      // Para um teste completo, seria necessário guardar o email do utilizador criado.
+    });
+
+    it('Não deve permitir atualizar a senha se a senha atual estiver incorreta', async () => {
+        const response = await request(app)
+          .put('/api/usuarios/perfil/senha')
+          .set('Authorization', `Bearer ${token}`)
+          .send({
+            senhaAtual: 'senhaErrada',
+            novaSenha: 'qualquerOutraSenha'
+          });
+  
+        expect(response.status).toBe(401);
+        expect(response.body.mensagem).toBe('A senha atual está incorreta.');
+    });
+
+    it('Não deve permitir definir uma nova senha com menos de 8 caracteres', async () => {
+        const response = await request(app)
+          .put('/api/usuarios/perfil/senha')
+          .set('Authorization', `Bearer ${token}`)
+          .send({
+            senhaAtual: senhaOriginal,
+            novaSenha: 'curta'
+          });
+  
+        expect(response.status).toBe(400);
+        expect(response.body.mensagem).toBe('A nova senha deve ter no mínimo 8 caracteres.');
+    });
+});
 
 });

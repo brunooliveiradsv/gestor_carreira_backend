@@ -86,4 +86,17 @@ describe('Testes das Rotas de Administração', () => {
     const deletedUser = await Usuario.findByPk(regularUser.id);
     expect(deletedUser).toBeNull();
   });
+
+   it('O Admin NÃO deve conseguir apagar a sua própria conta', async () => {
+    // Obtém o ID do admin a partir do token
+    const adminPayload = JSON.parse(Buffer.from(adminToken.split('.')[1], 'base64').toString());
+    const adminId = adminPayload.id;
+
+    const response = await request(app)
+      .delete(`/api/admin/usuarios/${adminId}`) // Tenta apagar o próprio ID
+      .set('Authorization', `Bearer ${adminToken}`);
+      
+    expect(response.status).toBe(403); // Espera "Forbidden"
+    expect(response.body.mensagem).toBe('Um administrador não pode apagar a própria conta.');
+  });
 });

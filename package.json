@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-     "test": "cross-env NODE_ENV=test jest --testTimeout=10000 --runInBand",
+    "test": "cross-env NODE_ENV=test jest --testTimeout=10000 --runInBand --coverage",
     "dev": "nodemon server.js",
     "start": "node server.js",
     "deploy": "npx sequelize-cli db:migrate && node server.js"
