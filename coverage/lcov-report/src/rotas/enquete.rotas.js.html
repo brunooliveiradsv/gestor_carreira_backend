@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for src/servicos/log.servico.js</title>
+    <title>Code coverage report for src/rotas/enquete.rotas.js</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../../prettify.css" />
     <link rel="stylesheet" href="../../base.css" />
@@ -19,34 +19,34 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/servicos</a> log.servico.js</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/rotas</a> enquete.rotas.js</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">83.33% </span>
+                <span class="strong">93.33% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>5/6</span>
+                <span class='fraction'>14/15</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>0/0</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">80% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>4/5</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
-                <span class="quiet">Functions</span>
-                <span class='fraction'>1/1</span>
-            </div>
-        
-            
-            <div class='fl pad1y space-right2'>
-                <span class="strong">83.33% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>5/6</span>
+                <span class='fraction'>11/11</span>
             </div>
         
             
@@ -78,37 +78,43 @@
 <a name='L13'></a><a href='#L13'>13</a>
 <a name='L14'></a><a href='#L14'>14</a>
 <a name='L15'></a><a href='#L15'>15</a>
-<a name='L16'></a><a href='#L16'>16</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">13x</span>
-<span class="cline-any cline-yes">94x</span>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">94x</span>
-<span class="cline-any cline-yes">94x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">13x</span></td><td class="text"><pre class="prettyprint lang-js">// src/servicos/log.servico.js
-const registrarAcao = (conexao, userId, actionType, details = {}) =&gt; {
-    const { ActivityLog } = conexao.models;
-    // Usamos um 'try/catch' para garantir que uma falha no log não quebre a funcionalidade principal
-    try {
-        ActivityLog.create({
-            user_id: userId,
-            action_type: actionType,
-            details: details
-        });
-    } catch (error) {
-<span class="cstat-no" title="statement not covered" >        console.error(`Falha ao registrar a ação no log: ${actionType} para o usuário ${userId}`, error);</span>
-    }
-};
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// src/rotas/enquete.rotas.js
+const express = require('express');
+const enqueteControlador = require('../controladores/enquete.controlador');
+const authMiddleware = require('../middlewares/autenticacao');
 &nbsp;
-module.exports = { registrarAcao };</pre></td></tr></table></pre>
+module.exports = (conexao) =&gt; {
+  const roteador = express.Router();
+  
+  // Todas as rotas de GESTÃO de enquetes exigem que o utilizador esteja logado
+  roteador.use(authMiddleware(conexao));
+&nbsp;
+  roteador.post('/', (req, res, next) =&gt; enqueteControlador.criarEnquete(req, res, conexao, next));
+  roteador.get('/', (req, res, next) =&gt; enqueteControlador.listarEnquetes(req, res, conexao, next));
+  roteador.patch('/:id/ativar', (req, res, next) =&gt; enqueteControlador.ativarEnquete(req, res, conexao, next));
+  roteador.delete('/:id', <span class="fstat-no" title="function not covered" >(r</span>eq, res, next) =&gt; <span class="cstat-no" title="statement not covered" >enqueteControlador.apagarEnquete(req, res, conexao, next))</span>;
+&nbsp;
+  return roteador;
+};</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
             </div><!-- /wrapper -->

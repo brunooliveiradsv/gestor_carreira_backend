@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">77.77% </span>
+                <span class="strong">81.48% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>21/27</span>
+                <span class='fraction'>22/27</span>
             </div>
         
             
@@ -37,9 +37,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">40% </span>
+                <span class="strong">50% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>4/10</span>
+                <span class='fraction'>5/10</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line medium'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -93,34 +93,34 @@
 <a name='L28'></a><a href='#L28'>28</a>
 <a name='L29'></a><a href='#L29'>29</a>
 <a name='L30'></a><a href='#L30'>30</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// src/rotas/admin.rotas.js
 const express = require('express');
 const adminControlador = require('../controladores/admin.controlador');
@@ -146,7 +146,7 @@ roteador.put('/usuarios/:id/assinatura', (req, res) =&gt; adminControlador.geren
 &nbsp;
   // --- ROTAS DE MODERAÇÃO DE SUGESTÕES ---
   roteador.get('/sugestoes', <span class="fstat-no" title="function not covered" >(r</span>eq, res) =&gt; <span class="cstat-no" title="statement not covered" >sugestaoControlador.listarSugestoesPendentes(req, res, conexao))</span>;
-  roteador.put('/sugestoes/:id/aprovar', <span class="fstat-no" title="function not covered" >(r</span>eq, res) =&gt; <span class="cstat-no" title="statement not covered" >sugestaoControlador.aprovarSugestao(req, res, conexao))</span>;
+  roteador.put('/sugestoes/:id/aprovar', (req, res) =&gt; sugestaoControlador.aprovarSugestao(req, res, conexao));
   roteador.put('/sugestoes/:id/rejeitar', <span class="fstat-no" title="function not covered" >(r</span>eq, res) =&gt; <span class="cstat-no" title="statement not covered" >sugestaoControlador.rejeitarSugestao(req, res, conexao))</span>;
   
   return roteador;
@@ -157,7 +157,7 @@ roteador.put('/usuarios/:id/assinatura', (req, res) =&gt; adminControlador.geren
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-07-25T14:53:00.171Z
+                at 2025-07-25T15:05:41.154Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
