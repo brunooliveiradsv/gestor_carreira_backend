@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+     "test": "cross-env NODE_ENV=test jest --testTimeout=10000 --runInBand",
     "dev": "nodemon server.js",
     "start": "node server.js",
     "deploy": "npx sequelize-cli db:migrate && node server.js"
@@ -32,7 +32,11 @@
     "stripe": "^18.3.0"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
+    "jest": "^30.0.5",
     "nodemon": "^3.1.10",
-    "sequelize-cli": "^6.6.3"
+    "sequelize-cli": "^6.6.3",
+    "sqlite3": "^5.1.7",
+    "supertest": "^7.1.4"
   }
 }
