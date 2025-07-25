@@ -7,7 +7,11 @@ exports.criar = async (req, res, conexao) => {
   const usuarioId = req.usuario.id;
   try {
     const novoContato = await Contato.create({ nome, telefone, email, funcao, usuario_id: usuarioId });
-    conquistaServico.verificarEConcederConquistas(usuarioId, 'CONTAGEM_CONTATOS', conexao);
+    
+    // --- CORREÇÃO AQUI ---
+    // Adiciona o 'await' para garantir que a verificação da conquista termina antes de continuar.
+    await conquistaServico.verificarEConcederConquistas(usuarioId, 'CONTAGEM_CONTATOS', conexao);
+
     return res.status(201).json(novoContato);
   } catch (erro) {
     console.error("Erro ao criar contato:", erro);

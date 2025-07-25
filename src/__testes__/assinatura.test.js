@@ -2,7 +2,7 @@
 const request = require('supertest');
 const express = require('express');
 const cors = require('cors');
-const stripe = require('stripe'); // Importa o stripe, que será o nosso mock
+const stripe = require('stripe'); // O Jest vai substituir isto pela nossa simulação
 const conexao = require('../database');
 const tratadorDeErros = require('../middlewares/tratadorDeErros');
 
@@ -10,25 +10,8 @@ const usuarioRotas = require('../rotas/usuario.rotas');
 const assinaturaRotas = require('../rotas/assinatura.rotas');
 const webhookRotas = require('../rotas/webhook.rotas');
 
-// --- SIMULAÇÃO FINAL E CORRETA ---
-// 1. Criamos um objeto de simulação partilhado com todas as funções necessárias.
-const mockStripeInstance = {
-  checkout: {
-    sessions: {
-      create: jest.fn(),
-    },
-  },
-  webhooks: {
-    constructEvent: jest.fn(),
-  },
-  subscriptions: {
-    retrieve: jest.fn(),
-  },
-};
-
-// 2. Dizemos ao Jest que, quando o módulo 'stripe' for importado,
-// ele deve ser uma função que SEMPRE retorna o nosso objeto partilhado (mockStripeInstance).
-jest.mock('stripe', () => jest.fn(() => mockStripeInstance));
+// Diz ao Jest para usar a nossa simulação manual em src/__mocks__/stripe.js
+jest.mock('stripe');
 
 const app = express();
 app.use('/webhook', express.raw({ type: 'application/json' }));
@@ -42,9 +25,10 @@ app.use(tratadorDeErros);
 describe('Testes das Rotas de Assinatura e Webhooks', () => {
   let token;
   let usuario;
+  // O construtor do Stripe é agora um mock. Vamos obter a instância que ele retorna.
+  const stripeInstance = new stripe();
 
   beforeEach(async () => {
-    // 3. Limpa todos os mocks antes de cada teste para garantir isolamento.
     jest.clearAllMocks();
     await conexao.sync({ force: true });
     
@@ -62,8 +46,7 @@ describe('Testes das Rotas de Assinatura e Webhooks', () => {
 
   it('Deve criar uma sessão de checkout do Stripe', async () => {
     const sessaoFalsa = { url: 'https://checkout.stripe.com/pay/cs_test_12345' };
-    // 4. Configura o nosso objeto de simulação diretamente.
-    mockStripeInstance.checkout.sessions.create.mockResolvedValue(sessaoFalsa);
+    stripeInstance.checkout.sessions.create.mockResolvedValue(sessaoFalsa);
 
     const response = await request(app)
       .post('/api/assinatura/criar-sessao-checkout')
@@ -72,7 +55,7 @@ describe('Testes das Rotas de Assinatura e Webhooks', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.url).toBe(sessaoFalsa.url);
-    expect(mockStripeInstance.checkout.sessions.create).toHaveBeenCalledTimes(1);
+    expect(stripeInstance.checkout.sessions.create).toHaveBeenCalledTimes(1);
   });
 
   it('Deve atualizar o plano do utilizador quando o webhook de checkout.session.completed for recebido', async () => {
@@ -88,8 +71,8 @@ describe('Testes das Rotas de Assinatura e Webhooks', () => {
       items: { data: [{ price: { id: process.env.STRIPE_PRICE_ID_PREMIUM_MENSAL || 'price_premium_mensal_teste' } }] }
     };
 
-    mockStripeInstance.webhooks.constructEvent.mockReturnValue(eventoFalso);
-    mockStripeInstance.subscriptions.retrieve.mockResolvedValue(subscricaoFalsa);
+    stripeInstance.webhooks.constructEvent.mockReturnValue(eventoFalso);
+    stripeInstance.subscriptions.retrieve.mockResolvedValue(subscricaoFalsa);
 
     await request(app)
       .post('/webhook')
