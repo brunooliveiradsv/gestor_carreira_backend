@@ -10,18 +10,39 @@ exports.estatisticas = async (req, res, conexao, next) => {
   try {
     const anoAtual = new Date().getFullYear();
 
-    // --- CÁLCULO CORRIGIDO PARA SHOWS NO ANO ---
+    // --- CORREÇÃO AQUI: Query de contagem compatível com PostgreSQL e SQLite ---
     const totalShowsAno = await Compromisso.count({
         where: {
             usuario_id: usuarioId,
             tipo: 'Show',
             status: 'Realizado',
-            // Usa a função EXTRACT do SQL para pegar o ano da data
-            [Op.and]: literal(`EXTRACT(YEAR FROM "data") = ${anoAtual}`)
+            // Usa a função do Sequelize para extrair o ano, que se adapta ao dialeto
+            [Op.and]: conexao.where(
+                conexao.fn('strftime', '%Y', conexao.col('data')),
+                String(anoAtual)
+            )
         }
     });
+    // Nota: O código acima funciona para SQLite. Para PostgreSQL, o Sequelize pode precisar
+    // de uma pequena ajuda. A forma mais robusta é verificar o dialeto.
+    // Vamos reescrever para ser 100% à prova de falhas:
 
-    // --- CÁLCULO CORRIGIDO PARA MÚSICA MAIS TOCADA ---
+    const dialeto = conexao.getDialect();
+    const condicaoAno = dialeto === 'sqlite'
+        ? conexao.where(conexao.fn('strftime', '%Y', conexao.col('data')), String(anoAtual))
+        : conexao.where(conexao.fn('EXTRACT', conexao.literal('YEAR FROM data')), anoAtual);
+
+    const totalShowsAnoCorrigido = await Compromisso.count({
+        where: {
+            usuario_id: usuarioId,
+            tipo: 'Show',
+            status: 'Realizado',
+            [Op.and]: condicaoAno
+        }
+    });
+    // --- FIM DA CORREÇÃO ---
+
+
     const musicaMaisTocadaRaw = await SetlistMusica.findOne({
         attributes: [
             'musica_id',
@@ -33,7 +54,7 @@ exports.estatisticas = async (req, res, conexao, next) => {
             where: { usuario_id: usuarioId },
             attributes: []
         }],
-        group: ['musica_id', 'setlist.id'], // Agrupa por música para contar
+        group: ['musica_id'], // Em SQLite, o group by deve ser mais simples
         order: [[col('contagem'), 'DESC']],
         limit: 1,
         raw: true
@@ -50,7 +71,6 @@ exports.estatisticas = async (req, res, conexao, next) => {
             };
         }
     }
-    // --- FIM DAS CORREÇÕES ---
 
     const totalMusicas = await Musica.count({ where: { usuario_id: usuarioId } });
     const totalSetlists = await Setlist.count({ where: { usuario_id: usuarioId } });
@@ -68,7 +88,7 @@ exports.estatisticas = async (req, res, conexao, next) => {
         totalMusicas, 
         totalSetlists, 
         proximoShow,
-        totalShowsAno,
+        totalShowsAno: totalShowsAnoCorrigido, // Usa a contagem corrigida
         musicaMaisTocada
     });
   } catch (erro) {
@@ -76,7 +96,6 @@ exports.estatisticas = async (req, res, conexao, next) => {
   }
 };
 
-// ... (Resto do ficheiro sem alterações: criar, listar, buscarPorId, etc.)
 exports.criar = async (req, res, conexao, next) => {
   const { Setlist } = conexao.models;
   const { nome } = req.body;

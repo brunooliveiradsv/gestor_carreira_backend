@@ -1,7 +1,5 @@
 // src/__mocks__/stripe.js
 
-// 1. Criamos um objeto partilhado que será a nossa "instância" falsa do Stripe.
-//    Exportamo-lo para que o nosso ficheiro de teste o possa importar e controlar.
 const mockStripeInstance = {
   checkout: {
     sessions: {
@@ -14,8 +12,14 @@ const mockStripeInstance = {
   subscriptions: {
     retrieve: jest.fn(),
   },
+  // --- ADICIONE ESTE BLOCO ---
+  billingPortal: {
+    sessions: {
+      create: jest.fn(),
+    },
+  },
 };
 
-// 2. O módulo 'stripe' é uma função construtora.
-//    Exportamos uma função de simulação que SEMPRE retorna a nossa instância partilhada.
-module.exports = jest.fn(() => mockStripeInstance);
+const mockStripe = jest.fn(() => mockStripeInstance);
+
+module.exports = mockStripe;

@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">69.23% </span>
+                <span class="strong">46.15% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>18/26</span>
+                <span class='fraction'>12/26</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">62.5% </span>
+                <span class="strong">43.75% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>10/16</span>
+                <span class='fraction'>7/16</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">72% </span>
+                <span class="strong">48% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>18/25</span>
+                <span class='fraction'>12/25</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line medium'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -136,38 +136,38 @@
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -217,17 +217,17 @@ exports.processarCompromissoRealizado = async (compromisso, conexao) =&gt; {
     }
     
     // --- Automação financeira (lógica existente) ---
-    if (compromisso.valor_cache &amp;&amp; parseFloat(compromisso.valor_cache) &gt; 0) {
-      const receitaExistente = await Transacao.findOne({ where: { compromisso_id: idDoCompromisso, tipo: 'receita' }});
-      <span class="missing-if-branch" title="else path not taken" >E</span>if (!receitaExistente) {
-        await Transacao.create({
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (compromisso.valor_cache &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >parseFloat(compromisso.valor_cache) &gt; 0)</span> {
+      const receitaExistente = <span class="cstat-no" title="statement not covered" >await Transacao.findOne({ where: { compromisso_id: idDoCompromisso, tipo: 'receita' }});</span>
+<span class="cstat-no" title="statement not covered" >      if (!receitaExistente) {</span>
+<span class="cstat-no" title="statement not covered" >        await Transacao.create({</span>
           usuario_id: usuarioId, compromisso_id: idDoCompromisso,
           descricao: `Receita do compromisso: ${compromisso.nome_evento}`,
           valor: compromisso.valor_cache, tipo: 'receita', data: compromisso.data,
         });
-        console.log(`Receita do compromisso ${idDoCompromisso} lançada.`);
-        conquistaServico.verificarEConcederConquistas(usuarioId, 'PRIMEIRA_RECEITA_SHOW', conexao);
-        conquistaServico.verificarEConcederConquistas(usuarioId, 'TOTAL_RECEITAS', conexao);
+<span class="cstat-no" title="statement not covered" >        console.log(`Receita do compromisso ${idDoCompromisso} lançada.`);</span>
+<span class="cstat-no" title="statement not covered" >        conquistaServico.verificarEConcederConquistas(usuarioId, 'PRIMEIRA_RECEITA_SHOW', conexao);</span>
+<span class="cstat-no" title="statement not covered" >        conquistaServico.verificarEConcederConquistas(usuarioId, 'TOTAL_RECEITAS', conexao);</span>
       }
     }
     
@@ -277,7 +277,7 @@ exports.processarCompromissoRealizado = async (compromisso, conexao) =&gt; {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-07-25T15:05:41.154Z
+                at 2025-07-25T15:26:58.649Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

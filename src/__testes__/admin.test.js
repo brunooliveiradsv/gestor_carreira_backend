@@ -99,4 +99,55 @@ describe('Testes das Rotas de Administração', () => {
     expect(response.status).toBe(403); // Espera "Forbidden"
     expect(response.body.mensagem).toBe('Um administrador não pode apagar a própria conta.');
   });
+
+   it('O Admin deve conseguir criar um novo utilizador', async () => {
+    const novoUtilizador = {
+      nome: 'Utilizador Criado Pelo Admin',
+      email: 'novo.user@teste.com',
+      senha: 'senhaSuperSegura123',
+      role: 'usuario'
+    };
+
+    const response = await request(app)
+      .post('/api/admin/usuarios')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(novoUtilizador);
+
+    expect(response.status).toBe(201);
+    expect(response.body.email).toBe(novoUtilizador.email);
+    expect(response.body.role).toBe('usuario');
+  });
+
+  it('O Admin deve conseguir atualizar os dados de um utilizador', async () => {
+    const dadosAtualizados = {
+      nome: 'Nome Atualizado Pelo Admin',
+      role: 'admin' // Promover o utilizador a admin
+    };
+
+    const response = await request(app)
+      .put(`/api/admin/usuarios/${regularUser.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(dadosAtualizados);
+
+    expect(response.status).toBe(200);
+    expect(response.body.nome).toBe(dadosAtualizados.nome);
+    expect(response.body.role).toBe('admin');
+  });
+
+  it('O Admin não deve conseguir criar um utilizador com um e-mail que já existe', async () => {
+    const novoUtilizadorComEmailRepetido = {
+      nome: 'Utilizador Repetido',
+      email: regularUser.email, // Usa o e-mail do utilizador já existente
+      senha: 'outrasenha',
+      role: 'usuario'
+    };
+    
+    const response = await request(app)
+      .post('/api/admin/usuarios')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(novoUtilizadorComEmailRepetido);
+
+    expect(response.status).toBe(400);
+    expect(response.body.mensagem).toBe('Este e-mail já está em uso.');
+  });
 });

@@ -86,4 +86,74 @@ describe('Testes das Rotas de Assinatura e Webhooks', () => {
     expect(utilizadorAtualizado.status_assinatura).toBe('ativa');
     expect(utilizadorAtualizado.stripe_customer_id).toBe('cus_12345');
   });
+
+  it('Deve permitir que um utilizador com assinatura ativa troque de plano', async () => {
+    // 1. Garante que o utilizador tem uma assinatura ativa
+    const { Usuario } = conexao.models;
+    await Usuario.update({ plano: 'padrao', status_assinatura: 'ativa' }, { where: { id: usuario.id } });
+
+    // 2. Chama a rota para trocar para o plano premium
+    const response = await request(app)
+        .put('/api/assinatura/trocar-plano')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ novoPlano: 'premium' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.mensagem).toContain('plano foi alterado para premium');
+
+    // 3. Verifica a alteração na base de dados
+    const utilizadorAtualizado = await Usuario.findByPk(usuario.id);
+    expect(utilizadorAtualizado.plano).toBe('premium');
+  });
+
+  it('Deve criar uma sessão do Portal de Faturação para um cliente existente do Stripe', async () => {
+    // 1. Simula um utilizador que já é um cliente pagador no Stripe
+    const { Usuario } = conexao.models;
+    await Usuario.update({ 
+        plano: 'premium', 
+        status_assinatura: 'ativa',
+        stripe_customer_id: 'cus_12345' // ID de cliente do Stripe
+    }, { where: { id: usuario.id } });
+
+    // 2. Configura o mock do Stripe para o portal
+    const portalFalso = { url: 'https://billing.stripe.com/p/session/123' };
+    const stripeInstance = new stripe();
+    stripeInstance.billingPortal.sessions.create.mockResolvedValue(portalFalso);
+
+    // 3. Chama a rota do portal
+    const response = await request(app)
+        .post('/api/assinatura/criar-sessao-portal')
+        .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.url).toBe(portalFalso.url);
+    expect(stripeInstance.billingPortal.sessions.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('Deve criar uma sessão de Checkout para um utilizador em teste que quer gerir a faturação', async () => {
+    // 1. Simula um utilizador em período de teste
+    const { Usuario } = conexao.models;
+    const dataTermino = new Date();
+    dataTermino.setDate(dataTermino.getDate() + 5); // Teste termina em 5 dias
+    await Usuario.update({ 
+        plano: 'premium', 
+        status_assinatura: 'teste',
+        teste_termina_em: dataTermino
+    }, { where: { id: usuario.id } });
+
+    // 2. Configura o mock do Stripe para uma sessão de checkout
+    const sessaoCheckoutFalsa = { url: 'https://checkout.stripe.com/pay/cs_test_abcde' };
+    const stripeInstance = new stripe();
+    stripeInstance.checkout.sessions.create.mockResolvedValue(sessaoCheckoutFalsa);
+    
+    // 3. Chama a rota do portal, que deve redirecionar para o checkout
+    const response = await request(app)
+        .post('/api/assinatura/criar-sessao-portal')
+        .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.url).toBe(sessaoCheckoutFalsa.url);
+    expect(stripeInstance.checkout.sessions.create).toHaveBeenCalledTimes(1);
+  });
+
 });

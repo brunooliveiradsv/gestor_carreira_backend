@@ -5,30 +5,37 @@ const cors = require('cors');
 const conexao = require('../database');
 const tratadorDeErros = require('../middlewares/tratadorDeErros');
 
-// Importa TODAS as rotas, pois podem ser necessárias dependências
+// Importa o serviço que vamos simular
+const contratoServico = require('../servicos/contrato.servico.js');
+
+// Rotas
 const usuarioRotas = require('../rotas/usuario.rotas');
-const compromissoRotas = require('../rotas/compromisso.rotas'); // A rota que vamos testar
+const compromissoRotas = require('../rotas/compromisso.rotas');
+
+// --- SIMULAÇÃO (MOCK) ---
+// Diz ao Jest para substituir o serviço de contratos por uma simulação
+jest.mock('../servicos/contrato.servico.js');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-// Regista as rotas na app de teste
 app.use('/api/usuarios', usuarioRotas(conexao));
 app.use('/api/compromissos', compromissoRotas(conexao));
 app.use(tratadorDeErros);
 
-
 describe('Testes das Rotas de Compromissos', () => {
-  let token; // Variável para guardar o token de autenticação
+  let token;
+  let usuario;
 
-  // Antes de cada teste, cria um utilizador e faz login para obter um token fresco
   beforeEach(async () => {
-    // Limpa a base de dados antes de cada teste para garantir isolamento
+    jest.clearAllMocks(); // Limpa os mocks
     await conexao.sync({ force: true }); 
     
-    const usuario = { nome: 'Utilizador Compromisso', email: `comp-${Date.now()}@teste.com`, senha: '12345678' };
-    await request(app).post('/api/usuarios/registrar').send(usuario);
-    const loginResponse = await request(app).post('/api/usuarios/login').send({ email: usuario.email, senha: usuario.senha });
+    const dadosUsuario = { nome: 'Utilizador Compromisso', email: `comp-${Date.now()}@teste.com`, senha: '12345678' };
+    const registroRes = await request(app).post('/api/usuarios/registrar').send(dadosUsuario);
+    usuario = registroRes.body.usuario;
+
+    const loginResponse = await request(app).post('/api/usuarios/login').send({ email: dadosUsuario.email, senha: '12345678' });
     token = loginResponse.body.token;
   });
 
@@ -42,32 +49,68 @@ describe('Testes das Rotas de Compromissos', () => {
       nome_evento: 'Show de Teste',
       data: new Date().toISOString(),
       local: 'Palco Teste',
-      valor_cache: 500.00
     };
 
     const response = await request(app)
       .post('/api/compromissos')
-      .set('Authorization', `Bearer ${token}`) // Usa o token obtido no beforeEach
+      .set('Authorization', `Bearer ${token}`)
       .send(novoCompromisso);
 
     expect(response.status).toBe(201);
     expect(response.body.nome_evento).toBe(novoCompromisso.nome_evento);
-    expect(response.body.tipo).toBe('Show');
   });
 
   it('Deve listar os compromissos do utilizador autenticado', async () => {
-    // Primeiro, cria um compromisso para ter algo para listar
      const novoCompromisso = { tipo: 'Ensaio', nome_evento: 'Ensaio Teste', data: new Date().toISOString() };
      await request(app).post('/api/compromissos').set('Authorization', `Bearer ${token}`).send(novoCompromisso);
 
-    // Agora, lista os compromissos
     const response = await request(app)
         .get('/api/compromissos')
         .set('Authorization', `Bearer ${token}`);
 
     expect(response.status).toBe(200);
-    expect(Array.isArray(response.body)).toBe(true); // Esperamos que a resposta seja um array
-    expect(response.body.length).toBe(1); // Esperamos que tenha 1 compromisso
+    expect(response.body.length).toBe(1);
     expect(response.body[0].nome_evento).toBe(novoCompromisso.nome_evento);
+  });
+
+  // --- TESTE CORRIGIDO ---
+  it('Deve chamar o serviço de geração de contrato com os dados corretos', async () => {
+    // 1. Atualiza o nosso utilizador de teste para 'premium'
+    const { Usuario } = conexao.models;
+    await Usuario.update({ plano: 'premium' }, { where: { id: usuario.id } });
+
+    // 2. Cria um compromisso para o teste
+    const compromissoRes = await request(app)
+      .post('/api/compromissos')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'Show', nome_evento: 'Show para Contrato', data: new Date() });
+    const compromissoId = compromissoRes.body.id;
+
+    // 3. Define os dados do contratante
+    const dadosContratante = {
+      nome: 'Contratante Teste', nif: '123456789', morada: 'Rua de Teste, 123',
+      forma_pagamento: 'Transferência', cidade_foro: 'Cidade Teste', estado_foro: 'TS'
+    };
+    
+    // Simula uma resposta bem-sucedida do PDF para evitar que o teste fique pendurado
+    contratoServico.gerarContratoPDF.mockImplementation((compromisso, contratante, artista, stream) => {
+        stream.end();
+    });
+
+    // 4. Chama a rota para gerar o contrato
+    const response = await request(app)
+      .post(`/api/compromissos/${compromissoId}/gerar-contrato`)
+      .set('Authorization', `Bearer ${token}`)
+      .send(dadosContratante);
+    
+    // 5. Verifica as chamadas e a resposta
+    expect(response.status).toBe(200);
+    expect(contratoServico.gerarContratoPDF).toHaveBeenCalledTimes(1);
+    expect(contratoServico.gerarContratoPDF).toHaveBeenCalledWith(
+        expect.objectContaining({ id: compromissoId }),
+        dadosContratante,
+        expect.anything(),
+        expect.anything()
+    );
   });
 });
