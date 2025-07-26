@@ -3,38 +3,49 @@ const express = require('express');
 const vitrineControlador = require('../controladores/vitrine.controlador');
 const enqueteControlador = require('../controladores/enquete.controlador');
 
-// --- MIDDLEWARES NOVOS (A SEREM CRIADOS) ---
-// Estes middlewares serão necessários para obter os dados do artista e do fã
+// Importa os middlewares necessários
 const encontrarArtistaPorUrl = require('../middlewares/encontrarArtistaPorUrl'); 
 const authFaMiddleware = require('../middlewares/authFa'); 
 
 module.exports = (conexao) => {
   const roteador = express.Router();
 
-  // Rotas públicas que não precisam de login de fã
+  // --- ROTAS PÚBLICAS (não exigem login de fã) ---
+  // Middleware para encontrar o artista é aplicado primeiro
   roteador.get('/:url_unica', 
     (req, res, next) => encontrarArtistaPorUrl(req, res, conexao, next),
     (req, res, next) => vitrineControlador.obterVitrine(req, res, conexao, next)
   );
-  roteador.post('/enquetes/votar/:idOpcao', (req, res, next) => enqueteControlador.votarEmOpcao(req, res, conexao, next));
-
-  // --- NOVAS ROTAS ADICIONADAS ---
+  
   roteador.get('/:url_unica/ranking',
     (req, res, next) => encontrarArtistaPorUrl(req, res, conexao, next),
     (req, res, next) => vitrineControlador.obterRankingFas(req, res, conexao, next)
   );
+
   roteador.get('/:url_unica/musicas-curtidas',
     (req, res, next) => encontrarArtistaPorUrl(req, res, conexao, next),
     (req, res, next) => vitrineControlador.obterMusicasMaisCurtidas(req, res, conexao, next)
   );
 
-  // --- ROTAS QUE AGORA PRECISAM DE AUTENTICAÇÃO DE FÃ ---
-  // Note que o `authFaMiddleware` deve ser criado
+  roteador.post('/enquetes/votar/:idOpcao', (req, res, next) => enqueteControlador.votarEmOpcao(req, res, conexao, next));
+
+  
+  // --- ROTAS PROTEGIDAS (exigem login de fã) ---
+  
+  // Rota de aplauso
   roteador.post('/:url_unica/aplaudir',
-    authFaMiddleware(conexao),
-    (req, res, next) => encontrarArtistaPorUrl(req, res, conexao, next),
-    (req, res, next) => vitrineControlador.registrarAplauso(req, res, conexao, next)
+    authFaMiddleware(conexao), // 1. Verifica o token do fã
+    (req, res, next) => encontrarArtistaPorUrl(req, res, conexao, next), // 2. Encontra o artista
+    (req, res, next) => vitrineControlador.registrarAplauso(req, res, conexao, next) // 3. Executa a ação
   );
+
+  // Rota de "gosto/não gosto"
+  roteador.post('/posts/:id/reacao',
+    authFaMiddleware(conexao), // 1. Garante que um fã está logado
+    (req, res, next) => vitrineControlador.registrarReacaoPost(req, res, conexao, next) // 2. Executa a ação
+  );
+
+  // Rota para curtir uma música
   roteador.post('/musicas/:id/like',
     authFaMiddleware(conexao),
     (req, res, next) => vitrineControlador.likeMusica(req, res, conexao, next)
