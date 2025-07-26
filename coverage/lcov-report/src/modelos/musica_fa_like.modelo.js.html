@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for src/modelos/compromisso.modelo.js</title>
+    <title>Code coverage report for src/modelos/musica_fa_like.modelo.js</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../../prettify.css" />
     <link rel="stylesheet" href="../../base.css" />
@@ -19,7 +19,7 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/modelos</a> compromisso.modelo.js</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/modelos</a> musica_fa_like.modelo.js</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
@@ -94,14 +94,7 @@
 <a name='L29'></a><a href='#L29'>29</a>
 <a name='L30'></a><a href='#L30'>30</a>
 <a name='L31'></a><a href='#L31'>31</a>
-<a name='L32'></a><a href='#L32'>32</a>
-<a name='L33'></a><a href='#L33'>33</a>
-<a name='L34'></a><a href='#L34'>34</a>
-<a name='L35'></a><a href='#L35'>35</a>
-<a name='L36'></a><a href='#L36'>36</a>
-<a name='L37'></a><a href='#L37'>37</a>
-<a name='L38'></a><a href='#L38'>38</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L32'></a><a href='#L32'>32</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">15x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -124,7 +117,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -132,49 +125,38 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">15x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">15x</span></td><td class="text"><pre class="prettyprint lang-js">// src/modelos/compromisso.modelo.js
+<span class="cline-any cline-yes">15x</span></td><td class="text"><pre class="prettyprint lang-js">// src/modelos/musica_fa_like.modelo.js
+const { Model, DataTypes } = require('sequelize');
 &nbsp;
-const { Model, DataTypes } = require("sequelize");
-&nbsp;
-class Compromisso extends Model {
+class MusicaFaLike extends Model {
   static init(sequelize) {
-    super.init(
-      {
-        tipo: DataTypes.STRING,
-        nome_evento: DataTypes.STRING,
-        data: DataTypes.DATE,
-        local: DataTypes.STRING,
-        status: DataTypes.STRING,
-        valor_cache: DataTypes.DECIMAL,
-        despesas: DataTypes.JSONB,
-        // O campo da chave estrangeira é definido na migração,
-        // mas o Sequelize precisa de o conhecer.
-        setlist_id: DataTypes.INTEGER 
+    super.init({
+      fa_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
       },
-      {
-        sequelize,
-        tableName: "compromissos",
-      }
-    );
+      musica_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+      },
+    }, {
+      sequelize,
+      tableName: 'musica_fa_likes',
+      timestamps: true,
+      updatedAt: false,
+    })
   }
 &nbsp;
   static associate(models) {
-    // Associação com o dono do compromisso
-    this.belongsTo(models.Usuario, { foreignKey: "usuario_id", as: "dono" });
-&nbsp;
-    // --- ASSOCIAÇÃO CORRIGIDA ---
-    // Agora, um Compromisso pertence a um Setlist.
-    // A foreignKey foi renomeada para 'setlist_id' na migração.
-    this.belongsTo(models.Setlist, { foreignKey: 'setlist_id', as: 'setlist' });
+    this.belongsTo(models.Fa, { foreignKey: 'fa_id' });
+    
+    // --- CORREÇÃO AQUI ---
+    // Adicionamos o 'as: "musica"' para corresponder à query do controlador.
+    this.belongsTo(models.Musica, { foreignKey: 'musica_id', as: 'musica' });
   }
 }
 &nbsp;
-module.exports = Compromisso;</pre></td></tr></table></pre>
+module.exports = MusicaFaLike;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
             </div><!-- /wrapper -->

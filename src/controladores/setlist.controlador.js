@@ -1,5 +1,5 @@
 // src/controladores/setlist.controlador.js
-const { Op, fn, col, literal } = require('sequelize'); // fn, col, e literal são necessários
+const { Op, fn, col, literal } = require('sequelize');
 const { v4: uuidv4 } = require('uuid');
 const conquistaServico = require('../servicos/conquista.servico');
 const logService = require('../servicos/log.servico');
@@ -10,20 +10,24 @@ exports.estatisticas = async (req, res, conexao, next) => {
   try {
     const anoAtual = new Date().getFullYear();
 
-    // --- CORREÇÃO DEFINITIVA AQUI ---
+    // --- LÓGICA CORRIGIDA PARA COMPATIBILIDADE ---
+    // Verifica qual base de dados está a ser usada (sqlite para testes, postgres para produção)
     const dialeto = conexao.getDialect();
     const condicaoAno = dialeto === 'sqlite'
+        // Usa a função strftime para SQLite
         ? conexao.where(conexao.fn('strftime', '%Y', conexao.col('data')), String(anoAtual))
-        : literal(`EXTRACT(YEAR FROM "data") = ${anoAtual}`);
+        // Usa a função EXTRACT para PostgreSQL
+        : conexao.where(conexao.fn('EXTRACT', conexao.literal('YEAR FROM data')), anoAtual);
 
-    const totalShowsAno = await Compromisso.count({
+    const totalShowsAnoCorrigido = await Compromisso.count({
         where: {
             usuario_id: usuarioId,
             tipo: 'Show',
             status: 'Realizado',
-            [Op.and]: [condicaoAno] // Usa a condição dinâmica
+            [Op.and]: condicaoAno
         }
     });
+    // --- FIM DA CORREÇÃO DE COMPATIBILIDADE ---
 
     const musicaMaisTocadaRaw = await SetlistMusica.findOne({
         attributes: [
@@ -36,7 +40,7 @@ exports.estatisticas = async (req, res, conexao, next) => {
             where: { usuario_id: usuarioId },
             attributes: []
         }],
-        group: ['musica_id'], // Em SQLite, o group by deve ser mais simples
+        group: ['musica_id'],
         order: [[col('contagem'), 'DESC']],
         limit: 1,
         raw: true
@@ -70,7 +74,8 @@ exports.estatisticas = async (req, res, conexao, next) => {
         totalMusicas, 
         totalSetlists, 
         proximoShow,
-        totalShowsAno: totalShowsAnoCorrigido, // Usa a contagem corrigida
+        // --- CORREÇÃO DA VARIÁVEL ---
+        totalShowsAno: totalShowsAnoCorrigido,
         musicaMaisTocada
     });
   } catch (erro) {
