@@ -20,6 +20,9 @@ const ActivityLog = require('../modelos/activity_log.modelo.js');
 const Post = require('../modelos/post.modelo.js');
 const Enquete = require('../modelos/enquete.modelo');
 const EnqueteOpcao = require('../modelos/enquete_opcao.modelo');
+const Fa = require('../modelos/fa.modelo.js');
+const Interacao = require('../modelos/interacao.modelo.js');
+const MusicaFaLike = require('../modelos/musica_fa_like.modelo.js');
 
 const conexao = new Sequelize(dbConfig);
 
@@ -41,7 +44,10 @@ const modelos = [
   ActivityLog,
   Post,
   Enquete,
-  EnqueteOpcao
+  EnqueteOpcao,
+  Fa,
+  Interacao,
+  MusicaFaLike
 ];
 
 // Inicializa cada modelo, passando a conexão
