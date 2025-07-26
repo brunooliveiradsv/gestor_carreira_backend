@@ -122,31 +122,6 @@ exports.likeMusica = async (req, res, conexao, next) => {
     }
 };
 
-// --- NOVA FUNÇÃO ---
-exports.obterRankingFas = async (req, res, conexao, next) => {
-    const { Interacao, Fa } = conexao.models;
-    const artistaId = req.artista.id;
-
-    try {
-        const ranking = await Interacao.findAll({
-            attributes: [
-                'fa_id',
-                [fn('SUM', col('pontos')), 'total_pontos']
-            ],
-            where: { artista_id: artistaId },
-            include: [{ model: Fa, as: 'fa', attributes: ['nome', 'foto_url'] }],
-            group: ['fa_id', 'fa.id'],
-            order: [[fn('SUM', col('pontos')), 'DESC']],
-            limit: 5,
-            raw: true, // Facilita a formatação do resultado
-            nest: true,
-        });
-
-        return res.status(200).json(ranking);
-    } catch (erro) {
-        next(erro);
-    }
-};
 
 // --- NOVA FUNÇÃO ---
 exports.obterMusicasMaisCurtidas = async (req, res, conexao, next) => {
@@ -202,6 +177,32 @@ exports.registrarReacaoPost = async (req, res, conexao, next) => {
 
         return res.status(200).json({ mensagem: "Reação registada." });
         
+    } catch (erro) {
+        next(erro);
+    }
+};
+
+exports.obterRankingFas = async (req, res, conexao, next) => {
+    const { Interacao, Fa } = conexao.models;
+    // O middleware 'encontrarArtistaPorUrl' já deve ter colocado o artista no request
+    const artistaId = req.artista.id; 
+
+    try {
+        const ranking = await Interacao.findAll({
+            attributes: [
+                'fa_id',
+                [conexao.fn('SUM', conexao.col('pontos')), 'total_pontos']
+            ],
+            where: { artista_id: artistaId },
+            include: [{ model: Fa, as: 'fa', attributes: ['nome', 'foto_url'] }],
+            group: ['fa_id', 'fa.id'],
+            order: [[conexao.fn('SUM', conexao.col('pontos')), 'DESC']],
+            limit: 5,
+            raw: true,
+            nest: true,
+        });
+
+        return res.status(200).json(ranking);
     } catch (erro) {
         next(erro);
     }
