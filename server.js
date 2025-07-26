@@ -47,6 +47,7 @@ const postRotas = require("./src/rotas/post.rotas.js");
 const assinaturaRotas = require("./src/rotas/assinatura.rotas.js");
 const webhookRotas = require("./src/rotas/webhook.rotas.js");
 const enqueteRotas = require('./src/rotas/enquete.rotas.js');
+const authRotas = require('./src/rotas/auth.rotas.js'); // Rota de autenticação
 
 // Registro de todas as rotas da API
 app.use("/api/usuarios", usuarioRotas(conexao));
@@ -67,6 +68,7 @@ app.use("/api/posts", postRotas(conexao));
 app.use("/api/assinatura", assinaturaRotas(conexao));
 app.use("/webhook", webhookRotas(conexao));
 app.use("/api/enquetes", enqueteRotas(conexao));
+app.use("/api/auth", authRotas(conexao))
 
 // ADICIONADO: Middleware de tratamento de erros deve ser o ÚLTIMO
 app.use(tratadorDeErros);
