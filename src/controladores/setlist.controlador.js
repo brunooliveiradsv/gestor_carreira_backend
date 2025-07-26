@@ -10,38 +10,20 @@ exports.estatisticas = async (req, res, conexao, next) => {
   try {
     const anoAtual = new Date().getFullYear();
 
-    // --- CORREÇÃO AQUI: Query de contagem compatível com PostgreSQL e SQLite ---
+    // --- CORREÇÃO DEFINITIVA AQUI ---
+    const dialeto = conexao.getDialect();
+    const condicaoAno = dialeto === 'sqlite'
+        ? conexao.where(conexao.fn('strftime', '%Y', conexao.col('data')), String(anoAtual))
+        : literal(`EXTRACT(YEAR FROM "data") = ${anoAtual}`);
+
     const totalShowsAno = await Compromisso.count({
         where: {
             usuario_id: usuarioId,
             tipo: 'Show',
             status: 'Realizado',
-            // Usa a função do Sequelize para extrair o ano, que se adapta ao dialeto
-            [Op.and]: conexao.where(
-                conexao.fn('strftime', '%Y', conexao.col('data')),
-                String(anoAtual)
-            )
+            [Op.and]: [condicaoAno] // Usa a condição dinâmica
         }
     });
-    // Nota: O código acima funciona para SQLite. Para PostgreSQL, o Sequelize pode precisar
-    // de uma pequena ajuda. A forma mais robusta é verificar o dialeto.
-    // Vamos reescrever para ser 100% à prova de falhas:
-
-    const dialeto = conexao.getDialect();
-    const condicaoAno = dialeto === 'sqlite'
-        ? conexao.where(conexao.fn('strftime', '%Y', conexao.col('data')), String(anoAtual))
-        : conexao.where(conexao.fn('EXTRACT', conexao.literal('YEAR FROM data')), anoAtual);
-
-    const totalShowsAnoCorrigido = await Compromisso.count({
-        where: {
-            usuario_id: usuarioId,
-            tipo: 'Show',
-            status: 'Realizado',
-            [Op.and]: condicaoAno
-        }
-    });
-    // --- FIM DA CORREÇÃO ---
-
 
     const musicaMaisTocadaRaw = await SetlistMusica.findOne({
         attributes: [
