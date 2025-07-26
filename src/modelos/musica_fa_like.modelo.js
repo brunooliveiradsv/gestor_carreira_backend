@@ -15,15 +15,17 @@ class MusicaFaLike extends Model {
     }, {
       sequelize,
       tableName: 'musica_fa_likes',
-      timestamps: true, // Apenas o createdAt é necessário
-      updatedAt: false, // Não precisamos de updatedAt para um registo de "gosto"
+      timestamps: true,
+      updatedAt: false,
     })
   }
 
   static associate(models) {
-    // Define as associações a partir deste modelo de junção
     this.belongsTo(models.Fa, { foreignKey: 'fa_id' });
-    this.belongsTo(models.Musica, { foreignKey: 'musica_id' });
+    
+    // --- CORREÇÃO AQUI ---
+    // Adicionamos o 'as: "musica"' para corresponder à query do controlador.
+    this.belongsTo(models.Musica, { foreignKey: 'musica_id', as: 'musica' });
   }
 }
 
