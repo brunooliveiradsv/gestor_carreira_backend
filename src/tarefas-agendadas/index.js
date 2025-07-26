@@ -11,7 +11,7 @@ exports.iniciarTarefas = (conexao) => {
 
   // Agenda a tarefa para rodar a cada hora, no minuto 0.
   // (ex: 13:00, 14:00, 15:00)
-  cron.schedule('* * * * *', async () => {
+  cron.schedule('0 * * * *', async () => {
     console.log('Rodando tarefa agendada: Verificando compromissos passados...');
     
     try {
