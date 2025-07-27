@@ -19,6 +19,7 @@ class Usuario extends Model {
        stripe_customer_id: DataTypes.STRING,
        foto_capa_url: DataTypes.JSONB, // <-- ADICIONE ESTA LINHA
       video_destaque_url: DataTypes.STRING, // <-- ADICIONE ESTA LINHA
+      stripe_subscription_id: DataTypes.STRING,
     }, { sequelize, tableName: 'usuarios' })
   }
   
@@ -34,6 +35,7 @@ class Usuario extends Model {
     this.hasMany(models.SugestaoMusica, { foreignKey: 'usuario_id', as: 'sugestoes_feitas' });
     this.hasMany(models.ActivityLog, { foreignKey: 'user_id', as: 'activity_logs' });
     this.hasMany(models.Post, { foreignKey: 'user_id', as: 'posts' });
+    
   }
 }
 
