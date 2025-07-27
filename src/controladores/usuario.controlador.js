@@ -176,60 +176,46 @@ exports.buscarPerfil = async (req, res, conexao, next) => {
   return res.status(200).json(perfil);
 };
 
-exports.atualizarNome = async (req, res, conexao, next) => {
-  const { Usuario } = conexao.models;
-  const usuarioId = req.usuario.id;
-  const { nome } = req.body;
+exports.atualizarPerfil = async (req, res, conexao, next) => {
+    const { Usuario } = conexao.models;
+    const usuarioId = req.usuario.id;
+    const { nome, email } = req.body;
 
-  if (!nome) {
-    return res.status(400).json({ mensagem: "O nome é obrigatório." });
-  }
+    try {
+        const dadosParaAtualizar = {};
+        const usuarioAntes = await Usuario.findByPk(usuarioId);
 
-  try {
-    const [updated] = await Usuario.update({ nome }, {
-      where: { id: usuarioId }
-    });
+        if (nome && nome !== usuarioAntes.nome) {
+            dadosParaAtualizar.nome = nome;
+        }
 
-    if (updated) {
-      const usuarioAtualizado = await Usuario.findByPk(usuarioId, { attributes: { exclude: ['senha'] } });
-      logService.registrarAcao(conexao, usuarioId, 'UPDATE_PROFILE_NAME', { new_name: nome });
-      return res.status(200).json(usuarioAtualizado.get({ plain: true }));
+        if (email && email !== usuarioAntes.email) {
+            const emailExistente = await Usuario.findOne({ 
+                where: { email, id: { [conexao.Sequelize.Op.ne]: usuarioId } } 
+            });
+            if (emailExistente) {
+                return res.status(400).json({ mensagem: "Este e-mail já está a ser utilizado por outra conta." });
+            }
+            dadosParaAtualizar.email = email;
+        }
+
+        if (Object.keys(dadosParaAtualizar).length === 0) {
+            return res.status(200).json(usuarioAntes); // Retorna o utilizador sem alterações se nada mudou
+        }
+
+        const [updated] = await Usuario.update(dadosParaAtualizar, { where: { id: usuarioId } });
+
+        if (updated) {
+            const usuarioAtualizado = await Usuario.findByPk(usuarioId, { attributes: { exclude: ['senha'] } });
+            logService.registrarAcao(conexao, usuarioId, 'UPDATE_PROFILE', { changes: Object.keys(dadosParaAtualizar) });
+            return res.status(200).json(usuarioAtualizado.get({ plain: true }));
+        }
+        
+        return res.status(404).json({ mensagem: "Utilizador não encontrado." });
+
+    } catch (error) {
+        next(error);
     }
-    
-    return res.status(404).json({ mensagem: "Utilizador não encontrado." });
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.atualizarEmail = async (req, res, conexao, next) => {
-  const { Usuario } = conexao.models;
-  const usuarioId = req.usuario.id;
-  const { email } = req.body;
-
-  if (!email) {
-    return res.status(400).json({ mensagem: "O campo de e-mail é obrigatório." });
-  }
-
-  try {
-    const emailExistente = await Usuario.findOne({ where: { email, id: { [conexao.Sequelize.Op.ne]: usuarioId } } });
-    if (emailExistente) {
-      return res.status(400).json({ mensagem: "Este e-mail já está sendo utilizado por outra conta." });
-    }
-
-    const [updated] = await Usuario.update({ email }, { where: { id: usuarioId } });
-    
-    if (updated) {
-      const usuarioAtualizado = await Usuario.findByPk(usuarioId);
-      const { senha, ...perfil } = usuarioAtualizado.get({ plain: true });
-      logService.registrarAcao(conexao, usuarioId, 'UPDATE_PROFILE_EMAIL', { new_email: email });
-      return res.status(200).json(perfil);
-    }
-    return res.status(404).json({ mensagem: "Usuário não encontrado." });
-
-  } catch (error) {
-    next(error);
-  }
 };
 
 exports.atualizarSenha = async (req, res, conexao, next) => {
@@ -268,7 +254,6 @@ exports.atualizarSenha = async (req, res, conexao, next) => {
   }
 };
 
-// --- FUNÇÃO CORRIGIDA ---
 exports.atualizarFoto = async (req, res, conexao, next) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
