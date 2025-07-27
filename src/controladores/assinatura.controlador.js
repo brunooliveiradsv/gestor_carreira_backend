@@ -1,23 +1,23 @@
 // src/controladores/assinatura.controlador.js
 
-// --- 1. ESTA LINHA É A CORREÇÃO CRUCIAL ---
-// Ela inicializa o Stripe e torna a variável 'stripe' disponível para todo o ficheiro.
+// Garante que a chave secreta foi carregada do .env
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('A variável de ambiente STRIPE_SECRET_KEY não está definida.');
+}
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const planosStripe = {
-  padrao_mensal: process.env.STRIPE_PRICE_ID_PADRAO_MENSAL,
-  padrao_anual: process.env.STRIPE_PRICE_ID_PADRAO_ANUAL,
-  premium_mensal: process.env.STRIPE_PRICE_ID_PREMIUM_MENSAL,
-  premium_anual: process.env.STRIPE_PRICE_ID_PREMIUM_ANUAL,
-};
 
 exports.criarSessaoCheckout = async (req, res, conexao) => {
   const { planoId } = req.body;
   const usuarioId = req.usuario.id;
 
-  const success_url = `${process.env.FRONTEND_URL}/configuracoes`; // Redireciona para configurações após sucesso
+  const success_url = `${process.env.FRONTEND_URL}/configuracoes?pagamento=sucesso`;
   const cancel_url = `${process.env.FRONTEND_URL}/assinatura`;
 
   try {
+    if (!planoId) {
+        return res.status(400).json({ mensagem: "ID do plano não foi fornecido pelo frontend." });
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'subscription',
@@ -32,7 +32,7 @@ exports.criarSessaoCheckout = async (req, res, conexao) => {
 
     return res.json({ url: session.url });
   } catch (error) {
-    console.error("Erro ao criar sessão de checkout do Stripe:", error);
+    console.error("Erro CRÍTICO ao criar sessão de checkout do Stripe:", error.message);
     return res.status(500).json({ mensagem: "Não foi possível iniciar o pagamento." });
   }
 };
