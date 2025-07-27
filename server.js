@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const conexao = require("./src/database");
 const cors = require("cors");
-const tratadorDeErros = require('./src/middlewares/tratadorDeErros'); // IMPORTADO
+const tratadorDeErros = require('./src/middlewares/tratadorDeErros');
 
 const app = express();
 
@@ -24,10 +24,18 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// --- INÍCIO DA CORREÇÃO ---
+// A rota do webhook é registada ANTES do express.json()
+const webhookRotas = require("./src/rotas/webhook.rotas.js");
+app.use("/webhook", webhookRotas(conexao));
+// --- FIM DA CORREÇÃO ---
+
+// O middleware express.json() agora vem DEPOIS do webhook
 app.use(express.json());
 app.use('/uploads', express.static(diretorioDeUploads));
 
-// Importação de todas as rotas da sua API
+// Importação das outras rotas
 const usuarioRotas = require("./src/rotas/usuario.rotas.js");
 const compromissoRotas = require("./src/rotas/compromisso.rotas.js");
 const financeiroRotas = require("./src/rotas/financeiro.rotas.js");
@@ -45,11 +53,10 @@ const musicaMestreRotas = require("./src/rotas/musica_mestre.rotas.js");
 const logRotas = require("./src/rotas/log.rotas.js");
 const postRotas = require("./src/rotas/post.rotas.js"); 
 const assinaturaRotas = require("./src/rotas/assinatura.rotas.js");
-const webhookRotas = require("./src/rotas/webhook.rotas.js");
 const enqueteRotas = require('./src/rotas/enquete.rotas.js');
-const authRotas = require('./src/rotas/auth.rotas.js'); // Rota de autenticação
+const authRotas = require('./src/rotas/auth.rotas.js');
 
-// Registro de todas as rotas da API
+// Registro das outras rotas da API
 app.use("/api/usuarios", usuarioRotas(conexao));
 app.use("/api/compromissos", compromissoRotas(conexao));
 app.use("/api/financeiro", financeiroRotas(conexao));
@@ -66,11 +73,9 @@ app.use("/api/admin/musicas", musicaMestreRotas(conexao));
 app.use("/api/admin/logs", logRotas(conexao));
 app.use("/api/posts", postRotas(conexao));
 app.use("/api/assinatura", assinaturaRotas(conexao));
-app.use("/webhook", webhookRotas(conexao));
 app.use("/api/enquetes", enqueteRotas(conexao));
-app.use("/api/auth", authRotas(conexao))
+app.use("/api/auth", authRotas(conexao));
 
-// ADICIONADO: Middleware de tratamento de erros deve ser o ÚLTIMO
 app.use(tratadorDeErros);
 
 const PORTA = process.env.PORT || 3000;
