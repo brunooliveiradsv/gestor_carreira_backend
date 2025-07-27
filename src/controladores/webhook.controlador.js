@@ -1,12 +1,42 @@
 // src/controladores/webhook.controlador.js
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
-// Objeto para mapear os Price IDs do Stripe para os nomes dos seus planos.
 const planosStripe = {
   [process.env.STRIPE_PRICE_ID_PADRAO_MENSAL]: 'padrao',
   [process.env.STRIPE_PRICE_ID_PADRAO_ANUAL]: 'padrao',
   [process.env.STRIPE_PRICE_ID_PREMIUM_MENSAL]: 'premium',
   [process.env.STRIPE_PRICE_ID_PREMIUM_ANUAL]: 'premium',
+};
+
+// --- FUNÇÃO AUXILIAR MELHORADA ---
+// Agora esta função recebe o ID da assinatura e busca os dados mais recentes na Stripe.
+const atualizarPlanoDoUsuario = async (conexao, customerId, subscriptionId) => {
+    const { Usuario } = conexao.models;
+
+    try {
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        
+        const planoId = subscription.items.data[0].price.id;
+        const planoEscolhido = planosStripe[planoId];
+        const statusAssinatura = subscription.status === 'active' || subscription.status === 'trialing' ? 'ativa' : 'inativa';
+
+        const usuario = await Usuario.findOne({ where: { stripe_customer_id: customerId } });
+
+        if (usuario && planoEscolhido) {
+            await usuario.update({
+                plano: planoEscolhido,
+                status_assinatura: statusAssinatura,
+                stripe_subscription_id: subscription.id,
+            });
+            console.log(`✅ Assinatura (ID: ${subscription.id}) atualizada para o utilizador ${usuario.id}. Plano: ${planoEscolhido}, Status: ${statusAssinatura}`);
+        } else {
+            console.error(`❌ Tentativa de atualizar assinatura para um cliente Stripe (ID: ${customerId}) que não corresponde a nenhum utilizador.`);
+        }
+    } catch (error) {
+        console.error(`❌ Erro ao buscar ou atualizar a assinatura ${subscriptionId}:`, error);
+        // Lança o erro para que o switch principal saiba que algo falhou
+        throw error;
+    }
 };
 
 exports.handleStripeWebhook = async (req, res, conexao) => {
@@ -16,86 +46,31 @@ exports.handleStripeWebhook = async (req, res, conexao) => {
 
     try {
         event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-        console.log(`✅ Webhook verificado com sucesso. Evento: ${event.type}`);
     } catch (err) {
         console.log(`❌ Erro na verificação da assinatura do webhook: ${err.message}`);
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
     const { Usuario } = conexao.models;
-    const session = event.data.object;
+    const dataObject = event.data.object;
 
-    // Lógica para cada tipo de evento
-    switch (event.type) {
-        case 'checkout.session.completed': {
-            const usuarioId = session.client_reference_id;
-            const customerId = session.customer;
-            const subscriptionId = session.subscription;
-
-            if (!usuarioId || !customerId) {
-                console.error('❌ Webhook checkout.session.completed sem usuarioId ou customerId.');
-                return res.status(400).send('Dados em falta no evento.');
+    try {
+        switch (event.type) {
+            case 'checkout.session.completed': {
+                // Passamos o ID do cliente e o ID da assinatura para a função auxiliar
+                await atualizarPlanoDoUsuario(conexao, dataObject.customer, dataObject.subscription);
+                break;
             }
 
-            try {
-                const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-                const planoId = subscription.items.data[0].price.id;
-                const planoEscolhido = planosStripe[planoId];
-
-                console.log(`> Processando checkout para Usuário ID: ${usuarioId}, Cliente Stripe ID: ${customerId}, Plano: ${planoEscolhido}`);
-
-                const usuario = await Usuario.findByPk(usuarioId);
-                if (usuario && planoEscolhido) {
-                    await usuario.update({
-                        status_assinatura: 'ativa',
-                        stripe_customer_id: customerId,
-                        stripe_subscription_id: subscriptionId,
-                        plano: planoEscolhido,
-                    });
-                    console.log(`✅ Assinatura ativada com sucesso para o usuário ID: ${usuarioId}`);
-                }
-            } catch (error) {
-                console.error("❌ Erro ao atualizar usuário após pagamento:", error);
-                return res.sendStatus(500);
+            case 'customer.subscription.created':
+            case 'customer.subscription.updated': {
+                // O dataObject aqui é a própria assinatura, então passamos o seu ID
+                await atualizarPlanoDoUsuario(conexao, dataObject.customer, dataObject.id);
+                break;
             }
-            break;
-        }
 
-        // Evento acionado quando uma assinatura é criada ou alterada diretamente no Stripe
-        case 'customer.subscription.created':
-        case 'customer.subscription.updated': {
-            const subscription = event.data.object;
-            const customerId = subscription.customer;
-            const planoId = subscription.items.data[0].price.id;
-            const planoEscolhido = planosStripe[planoId];
-            const statusAssinatura = subscription.status;
-
-            console.log(`> Processando atualização de assinatura para Cliente Stripe ID: ${customerId}`);
-
-            try {
-                const usuario = await Usuario.findOne({ where: { stripe_customer_id: customerId } });
-                if (usuario && (statusAssinatura === 'active' || statusAssinatura === 'trialing')) {
-                    await usuario.update({
-                        plano: planoEscolhido || 'free',
-                        status_assinatura: 'ativa',
-                        stripe_subscription_id: subscription.id,
-                    });
-                    console.log(`✅ Assinatura atualizada com sucesso para o usuário ID: ${usuario.id}`);
-                }
-            } catch (error) {
-                console.error("❌ Erro ao processar atualização de assinatura:", error);
-                return res.sendStatus(500);
-            }
-            break;
-        }
-
-        // Evento acionado quando uma assinatura é cancelada ou expira
-        case 'customer.subscription.deleted': {
-            const subscription = event.data.object;
-            const customerId = subscription.customer;
-            console.log(`> Processando cancelamento para Cliente Stripe ID: ${customerId}`);
-
-            try {
+            case 'customer.subscription.deleted': {
+                const customerId = dataObject.customer;
                 const usuario = await Usuario.findOne({ where: { stripe_customer_id: customerId } });
                 if (usuario) {
                     await usuario.update({
@@ -103,14 +78,14 @@ exports.handleStripeWebhook = async (req, res, conexao) => {
                         status_assinatura: 'cancelada',
                         stripe_subscription_id: null,
                     });
-                    console.log(`✅ Assinatura cancelada com sucesso para o usuário ID: ${usuario.id}`);
+                    console.log(`✅ Assinatura cancelada com sucesso para o utilizador ID: ${usuario.id}`);
                 }
-            } catch (error) {
-                console.error("❌ Erro ao processar cancelamento de assinatura:", error);
-                return res.sendStatus(500);
+                break;
             }
-            break;
         }
+    } catch (error) {
+        console.error("❌ Erro ao processar evento de webhook:", error);
+        return res.sendStatus(500);
     }
 
     res.status(200).json({ received: true });
