@@ -2,7 +2,7 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('Feedbacks', {
+    await queryInterface.createTable('feedbacks', {
       id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
@@ -31,11 +31,13 @@ module.exports = {
         type: Sequelize.TEXT,
         allowNull: true,
       },
-      createdAt: {
+      // --- CORREÇÃO AQUI ---
+      // Usando os nomes exatos que o Sequelize procura no PostgreSQL
+      created_at: {
         type: Sequelize.DATE,
         allowNull: false,
       },
-      updatedAt: {
+      updated_at: {
         type: Sequelize.DATE,
         allowNull: false,
       },
@@ -43,6 +45,6 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('Feedbacks');
+    await queryInterface.dropTable('feedbacks');
   }
 };

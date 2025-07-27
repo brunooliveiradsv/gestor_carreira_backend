@@ -19,7 +19,7 @@ class Feedback extends Model {
       },
     }, {
       sequelize: conexao,
-      tableName: 'Feedbacks',
+      tableName: 'feedbacks',
     });
   }
 
