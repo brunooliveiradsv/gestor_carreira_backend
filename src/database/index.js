@@ -47,7 +47,7 @@ const modelos = [
   EnqueteOpcao,
   Fa,
   Interacao,
-  MusicaFaLike
+  MusicaFaLike,
 ];
 
 // Inicializa cada modelo, passando a conexão
