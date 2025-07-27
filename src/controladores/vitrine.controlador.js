@@ -226,3 +226,35 @@ exports.obterLikesDoFa = async (req, res, conexao, next) => {
         next(erro);
     }
 };
+
+exports.enviarFeedback = async (req, res, conexao, next) => {
+    const { Feedback } = conexao.models; // Assumindo que você tem um modelo 'Feedback'
+    const faId = req.fa.id;
+    const artistaId = req.artista.id;
+    const { nota, comentario } = req.body;
+
+    if (!nota || nota < 1 || nota > 5) {
+        return res.status(400).json({ mensagem: 'Uma nota de 1 a 5 é obrigatória.' });
+    }
+
+    try {
+        // Opcional, mas recomendado: verificar se o fã já enviou feedback para este artista
+        const feedbackExistente = await Feedback.findOne({ where: { fa_id: faId, artista_id: artistaId } });
+        if (feedbackExistente) {
+            return res.status(409).json({ mensagem: 'Você já enviou um feedback para este artista.' });
+        }
+
+        // Cria o novo registo de feedback
+        await Feedback.create({
+            fa_id: faId,
+            artista_id: artistaId,
+            nota,
+            comentario,
+        });
+
+        return res.status(201).json({ mensagem: 'Feedback enviado com sucesso. Obrigado!' });
+
+    } catch (erro) {
+        next(erro);
+    }
+};

@@ -55,6 +55,12 @@ module.exports = (conexao) => {
     authFaMiddleware(conexao),
     (req, res, next) => enqueteControlador.votarEmOpcao(req, res, conexao, next)
   );
+
+  roteador.post('/:url_unica/feedback',
+  authFaMiddleware(conexao), // Garante que o fã está logado
+  (req, res, next) => encontrarArtistaPorUrl(req, res, conexao, next), // Identifica o artista
+  (req, res, next) => vitrineControlador.enviarFeedback(req, res, conexao, next)
+);
   
   return roteador;
 };
