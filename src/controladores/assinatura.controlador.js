@@ -19,7 +19,10 @@ exports.criarSessaoCheckout = async (req, res, conexao) => {
     }
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+      // --- INÍCIO DA ALTERAÇÃO ---
+      // Adicionado 'pix' à lista de métodos de pagamento
+      payment_method_types: ['card', 'pix'],
+      // --- FIM DA ALTERAÇÃO ---
       mode: 'subscription',
       client_reference_id: usuarioId,
       line_items: [{
