@@ -47,7 +47,7 @@ const modelos = [
   EnqueteOpcao,
   Fa,
   Interacao,
-  MusicaFaLike,
+  MusicaFaLike
 ];
 
 // Inicializa cada modelo, passando a conexão
@@ -59,15 +59,5 @@ modelos.forEach(modelo => {
     modelo.associate(conexao.models);
   }
 });
-
-// O Feedback pertence a um Fã e a um Artista
-Feedback.belongsTo(Fa, { foreignKey: 'fa_id', as: 'fa' });
-Feedback.belongsTo(Usuario, { foreignKey: 'artista_id', as: 'artista' });
-
-// Um Fã pode ter vários Feedbacks
-Fa.hasMany(Feedback, { foreignKey: 'fa_id', as: 'feedbacks' });
-
-// Um Artista pode receber vários Feedbacks
-Usuario.hasMany(Feedback, { foreignKey: 'artista_id', as: 'feedbacksRecebidos' });
 
 module.exports = conexao;
