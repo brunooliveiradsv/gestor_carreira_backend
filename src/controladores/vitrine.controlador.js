@@ -2,36 +2,34 @@
 const { Op, fn, col } = require("sequelize");
 const interacaoServico = require('../servicos/interacao.servico'); // O nosso novo serviço de interações
 
-// NOTA: Para manter o código limpo, estas novas funções assumem que as suas rotas terão middlewares para:
-// 1. Validar o JWT do fã e adicionar o objeto do fã ao request (ex: req.fa)
-// 2. Encontrar o artista pela url_unica e adicioná-lo ao request (ex: req.artista)
-
 exports.obterVitrine = async (req, res, conexao, next) => {
-    const { Usuario, Compromisso, Contato, Setlist, Musica, UsuarioConquista, Post, Enquete, EnqueteOpcao, MusicaFaLike } = conexao.models;
+    // Adicionado Feedback e Fa à desestruturação
+    const { Usuario, Compromisso, Contato, Setlist, Musica, UsuarioConquista, Post, Enquete, EnqueteOpcao, Feedback, Fa } = conexao.models;
     const { url_unica } = req.params;
 
     try {
         const artista = await Usuario.findOne({
             where: { url_unica },
-            attributes: [
-                'id', 'nome', 'foto_url', 'biografia', 'links_redes',
-                'foto_capa_url', 'video_destaque_url', 'plano'
-            ]
+            attributes: [ 'id', 'nome', 'foto_url', 'biografia', 'links_redes', 'foto_capa_url', 'video_destaque_url', 'plano' ]
         });
 
         if (!artista || artista.plano !== 'premium') {
             return res.status(404).json({ mensagem: "Página do artista não encontrada." });
         }
         
-        // --- INÍCIO DA CORREÇÃO ---
-
-        // 1. Calcular as estatísticas em paralelo com as outras buscas
-        const [proximosShows, totalAplausos, contatoPublico, postsRecentes, enqueteAtiva, stats] = await Promise.all([
+        const [
+            proximosShows, 
+            totalAplausos, 
+            contatoPublico, 
+            postsRecentes, 
+            enqueteAtiva, 
+            stats,
+            feedbacksRecentes // 1. Adicionado para buscar os feedbacks
+        ] = await Promise.all([
             Compromisso.findAll({
                 where: { usuario_id: artista.id, tipo: 'Show', status: 'Agendado', data: { [Op.gte]: new Date() } },
-                attributes: ['id', 'nome_evento', 'data', 'local'],
                 include: [{
-                    model: Setlist, as: 'setlist', attributes: ['id', 'nome'],
+                    model: Setlist, as: 'setlist',
                     include: [{ model: Musica, as: 'musicas', attributes: ['id', 'nome', 'artista'], through: { attributes: [] } }]
                 }],
                 order: [['data', 'ASC']],
@@ -41,24 +39,31 @@ exports.obterVitrine = async (req, res, conexao, next) => {
             Contato.findOne({ where: { usuario_id: artista.id, publico: true } }),
             Post.findAll({ where: { user_id: artista.id }, order: [['created_at', 'DESC']], limit: 5 }),
             Enquete.findOne({ where: { usuario_id: artista.id, ativa: true }, include: [{ model: EnqueteOpcao, as: 'opcoes' }] }),
-            // Promise.all aninhada para as contagens de estatísticas
             Promise.all([
                 Compromisso.count({ where: { usuario_id: artista.id, tipo: 'Show', status: 'Realizado' } }),
                 Musica.count({ where: { usuario_id: artista.id } }),
                 UsuarioConquista.count({ where: { usuario_id: artista.id } })
-            ])
+            ]),
+            // 2. Query para buscar os 3 feedbacks mais recentes, incluindo o nome e foto do fã
+            Feedback.findAll({
+                where: { artista_id: artista.id },
+                include: [{
+                    model: Fa,
+                    as: 'fa',
+                    attributes: ['nome', 'foto_url']
+                }],
+                order: [['createdAt', 'DESC']],
+                limit: 3
+            })
         ]);
 
         const [totalShows, totalMusicas, totalConquistas] = stats;
 
-        // 2. Montar o objeto de estatísticas
         const estatisticas = {
             shows: totalShows,
             musicas: totalMusicas,
             conquistas: totalConquistas
         };
-
-        // --- FIM DA CORREÇÃO ---
 
         const vitrine = {
             artista: { ...artista.toJSON(), aplausos: totalAplausos },
@@ -66,7 +71,8 @@ exports.obterVitrine = async (req, res, conexao, next) => {
             contatoPublico,
             postsRecentes,
             enqueteAtiva,
-            estatisticas, // 3. Adicionar as estatísticas ao objeto de resposta
+            estatisticas,
+            feedbacksRecentes, // 3. Adicionar os feedbacks à resposta da API
         };
 
         return res.status(200).json(vitrine);
@@ -75,7 +81,8 @@ exports.obterVitrine = async (req, res, conexao, next) => {
         next(erro);
     }
 };
-// --- FUNÇÃO REESCRITA ---
+
+//FUNÇÃO REESCRITA ---
 exports.registrarAplauso = async (req, res, conexao, next) => {
     try {
         const faId = req.fa.id; // Vem do middleware de autenticação do fã
