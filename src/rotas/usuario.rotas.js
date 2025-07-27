@@ -30,12 +30,14 @@ module.exports = (conexao) => {
 
   // --- Rotas Privadas ---
   roteador.get('/perfil', (req, res, next) => usuarioControlador.buscarPerfil(req, res, conexao, next));
+  
+  // --- CORREÇÃO AQUI ---
   roteador.put('/perfil', (req, res, next) => usuarioControlador.atualizarPerfil(req, res, conexao, next));
+  
   roteador.put('/perfil/senha', (req, res, next) => usuarioControlador.atualizarSenha(req, res, conexao, next));
   roteador.put('/perfil/publico', (req, res, next) => usuarioControlador.atualizarPerfilPublico(req, res, conexao, next));
   
   roteador.put('/perfil/foto', uploadFotoPerfil, (req, res, next) => usuarioControlador.atualizarFoto(req, res, conexao, next));
-  
   roteador.put('/perfil/capas', uploadFotosCapa, (req, res, next) => usuarioControlador.atualizarFotosCapa(req, res, conexao, next));
 
   return roteador;
