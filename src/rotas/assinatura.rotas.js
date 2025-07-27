@@ -9,14 +9,17 @@ module.exports = (conexao) => {
   // Todas as rotas de assinatura exigem que o usuário esteja logado
   roteador.use(authMiddleware(conexao));
 
+  // --- CORREÇÃO: Adicionado 'next' a todas as chamadas do controlador ---
+
   // Rota para o usuário iniciar o período de teste gratuito
-  roteador.post('/iniciar-teste', (req, res) => assinaturaControlador.iniciarTesteGratuito(req, res, conexao));
+  roteador.post('/iniciar-teste', (req, res, next) => assinaturaControlador.iniciarTesteGratuito(req, res, conexao, next));
 
-  roteador.post('/criar-sessao-checkout', (req, res) => assinaturaControlador.criarSessaoCheckout(req, res, conexao));
+  roteador.post('/criar-sessao-checkout', (req, res, next) => assinaturaControlador.criarSessaoCheckout(req, res, conexao, next));
 
-  roteador.put('/trocar-plano', (req, res) => assinaturaControlador.trocarPlano(req, res, conexao));
+  roteador.put('/trocar-plano', (req, res, next) => assinaturaControlador.trocarPlano(req, res, conexao, next));
 
-   roteador.post('/criar-sessao-portal', (req, res) => assinaturaControlador.criarSessaoPortal(req, res, conexao));
+  // A função 'criarSessaoPortal' é a que estava a causar o erro, pois ela chama 'next(error)'
+  roteador.post('/criar-sessao-portal', (req, res, next) => assinaturaControlador.criarSessaoPortal(req, res, conexao, next));
 
   return roteador;
 };
