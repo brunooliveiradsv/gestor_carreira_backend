@@ -1,7 +1,7 @@
 // src/controladores/admin.controlador.js
 const bcrypt = require("bcryptjs");
 
-// ... (funções listarUsuarios, atualizarUsuario, apagarUsuario, limparDadosUsuario, criarUsuario) ...
+// ... (as outras funções como listarUsuarios, etc., permanecem iguais)
 exports.listarUsuarios = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   try {
@@ -126,19 +126,21 @@ exports.criarUsuario = async (req, res, conexao) => {
       return res.status(400).json({ mensagem: "Este e-mail já está em uso." });
     }
 
-    const dataTerminoTeste = new Date();
-    dataTerminoTeste.setDate(dataTerminoTeste.getDate() + 7);
-
     const senhaCriptografada = bcrypt.hashSync(senha, 10);
+    
+    // --- INÍCIO DA CORREÇÃO ---
+    // Remove a lógica de período de teste e define os padrões corretos
     const novoUsuario = await Usuario.create({
       nome,
       email,
       senha: senhaCriptografada,
       role,
-      plano: 'premium',
-      status_assinatura: 'teste',
-      teste_termina_em: dataTerminoTeste
+      plano: 'free',
+      status_assinatura: 'inativa',
+      teste_termina_em: null, // Garante que não há data de teste
     });
+    // --- FIM DA CORREÇÃO ---
+
     const { senha: _, ...usuarioSemSenha } = novoUsuario.get({ plain: true });
     return res.status(201).json(usuarioSemSenha);
   } catch (erro) {
@@ -146,8 +148,6 @@ exports.criarUsuario = async (req, res, conexao) => {
   }
 };
 
-
-// --- FUNÇÃO ATUALIZADA ---
 exports.gerenciarAssinatura = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
   const { id } = req.params;
@@ -160,23 +160,19 @@ exports.gerenciarAssinatura = async (req, res, conexao) => {
     }
 
     if (acao === 'conceder') {
-      // Agora aceita 'free' como um plano válido
       if (!plano || !['free', 'padrao', 'premium'].includes(plano)) {
         return res.status(400).json({ mensagem: 'Plano inválido especificado.' });
       }
       
       usuario.plano = plano;
-      // Se o plano for 'free', o status é 'ativa', mas sem ser uma assinatura paga
-      // Se for 'padrao' ou 'premium', também é 'ativa'
       usuario.status_assinatura = 'ativa';
       usuario.teste_termina_em = null;
       await usuario.save();
       return res.status(200).json({ mensagem: `Plano ${plano} concedido com sucesso para ${usuario.nome}.` });
 
     } else if (acao === 'remover') {
-      // Remover a assinatura agora significa voltar para o plano 'free'
       usuario.plano = 'free';
-      usuario.status_assinatura = 'ativa'; // O plano free é sempre 'ativo'
+      usuario.status_assinatura = 'ativa';
       usuario.teste_termina_em = null;
       await usuario.save();
       return res.status(200).json({ mensagem: `Assinatura de ${usuario.nome} removida. O utilizador foi movido para o plano Free.` });
