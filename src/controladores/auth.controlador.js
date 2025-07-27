@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const client = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID);
 
 exports.googleCallback = async (req, res, conexao, next) => {
-    const { credential } = req.body; // O token JWT que o frontend envia
+    const { credential } = req.body;
 
     if (!credential) {
         return res.status(400).json({ mensagem: 'Credencial do Google não fornecida.' });
@@ -21,38 +21,27 @@ exports.googleCallback = async (req, res, conexao, next) => {
         const payload = ticket.getPayload();
 
         const { sub: google_id, email, name: nome, picture: foto_url } = payload;
-
         const { Fa } = conexao.models;
 
-        // 2. Procura se o fã já existe na sua base de dados
-        let fa = await Fa.findOne({ where: { google_id } });
-
-        // 3. Se não existir, cria um novo registo para o fã
-        if (!fa) {
-            fa = await Fa.create({
-                google_id,
-                email,
-                nome,
-                foto_url
-            });
-        }
-
-        // 4. Gera um token JWT para o fã (diferente do token do artista)
-        const tokenFa = jwt.sign(
-            { id: fa.id, nome: fa.nome, email: fa.email, foto_url: fa.foto_url },
-            process.env.JWT_SECRET, // Pode usar o mesmo segredo ou um diferente
-            { expiresIn: '24h' }
-        );
-
-        // 5. Envia o token e os dados do fã de volta para o frontend
-        return res.status(200).json({
-            mensagem: 'Login de fã bem-sucedido!',
-            token: tokenFa,
-            fa: { id: fa.id, nome: fa.nome, email: fa.email, foto_url: fa.foto_url }
+        // 2. Procura se o fã já existe ou cria um novo
+        const [fa] = await Fa.findOrCreate({
+            where: { google_id },
+            defaults: { email, nome, foto_url }
         });
 
+        // 3. Gera um token JWT para o fã usando um segredo específico para fãs
+        const tokenFa = jwt.sign(
+            { id: fa.id, nome: fa.nome, email: fa.email, foto_url: fa.foto_url },
+            process.env.JWT_SECRET_FA, // MELHORIA: Usar um segredo JWT diferente para fãs
+            { expiresIn: '7d' } // Aumentado para 7 dias
+        );
+
+        // 4. Envia apenas o token de volta, como o frontend espera
+        return res.status(200).json({ token: tokenFa });
+
     } catch (error) {
-        console.error("Erro na autenticação com Google:", error);
-        return res.status(401).json({ mensagem: 'Credencial do Google inválida ou expirada.' });
+        // Log do erro detalhado no console do servidor para depuração
+        console.error("Erro na autenticação com Google:", error.message); 
+        return res.status(401).json({ mensagem: 'Credencial do Google inválida ou expirada. Verifique as suas configurações de API.' });
     }
 };
