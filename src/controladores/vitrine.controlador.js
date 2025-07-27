@@ -7,7 +7,6 @@ const interacaoServico = require('../servicos/interacao.servico'); // O nosso no
 // 2. Encontrar o artista pela url_unica e adicioná-lo ao request (ex: req.artista)
 
 exports.obterVitrine = async (req, res, conexao, next) => {
-    // Agora desestruturamos todos os modelos, incluindo os novos
     const { Usuario, Compromisso, Contato, Setlist, Musica, UsuarioConquista, Post, Enquete, EnqueteOpcao, MusicaFaLike } = conexao.models;
     const { url_unica } = req.params;
 
@@ -24,41 +23,42 @@ exports.obterVitrine = async (req, res, conexao, next) => {
             return res.status(404).json({ mensagem: "Página do artista não encontrada." });
         }
         
-        // ALTERAÇÃO: Agora incluímos a setlist e as suas músicas nos próximos shows
-        const proximosShows = await Compromisso.findAll({
-            where: {
-                usuario_id: artista.id,
-                tipo: 'Show',
-                status: 'Agendado',
-                data: { [Op.gte]: new Date() }
-            },
-            attributes: ['id', 'nome_evento', 'data', 'local'],
-            include: [{
-                model: Setlist,
-                as: 'setlist',
-                attributes: ['id', 'nome'],
+        // --- INÍCIO DA CORREÇÃO ---
+
+        // 1. Calcular as estatísticas em paralelo com as outras buscas
+        const [proximosShows, totalAplausos, contatoPublico, postsRecentes, enqueteAtiva, stats] = await Promise.all([
+            Compromisso.findAll({
+                where: { usuario_id: artista.id, tipo: 'Show', status: 'Agendado', data: { [Op.gte]: new Date() } },
+                attributes: ['id', 'nome_evento', 'data', 'local'],
                 include: [{
-                    model: Musica,
-                    as: 'musicas',
-                    attributes: ['id', 'nome', 'artista'],
-                    through: { attributes: ['ordem'] } // Para ordenar as músicas corretamente
-                }]
-            }],
-            order: [['data', 'ASC']],
-            limit: 5
-        });
+                    model: Setlist, as: 'setlist', attributes: ['id', 'nome'],
+                    include: [{ model: Musica, as: 'musicas', attributes: ['id', 'nome', 'artista'], through: { attributes: [] } }]
+                }],
+                order: [['data', 'ASC']],
+                limit: 5
+            }),
+            conexao.models.Interacao.count({ where: { artista_id: artista.id, tipo: 'APLAUSO' } }),
+            Contato.findOne({ where: { usuario_id: artista.id, publico: true } }),
+            Post.findAll({ where: { user_id: artista.id }, order: [['created_at', 'DESC']], limit: 5 }),
+            Enquete.findOne({ where: { usuario_id: artista.id, ativa: true }, include: [{ model: EnqueteOpcao, as: 'opcoes' }] }),
+            // Promise.all aninhada para as contagens de estatísticas
+            Promise.all([
+                Compromisso.count({ where: { usuario_id: artista.id, tipo: 'Show', status: 'Realizado' } }),
+                Musica.count({ where: { usuario_id: artista.id } }),
+                UsuarioConquista.count({ where: { usuario_id: artista.id } })
+            ])
+        ]);
 
-        // Contagem de aplausos agora vem da tabela de interações
-        const totalAplausos = await conexao.models.Interacao.count({
-            where: { artista_id: artista.id, tipo: 'APLAUSO' }
-        });
+        const [totalShows, totalMusicas, totalConquistas] = stats;
 
-        const contatoPublico = await Contato.findOne({ where: { usuario_id: artista.id, publico: true } });
-        const postsRecentes = await Post.findAll({ where: { user_id: artista.id }, order: [['created_at', 'DESC']], limit: 5 });
-        const enqueteAtiva = await Enquete.findOne({
-            where: { usuario_id: artista.id, ativa: true },
-            include: [{ model: EnqueteOpcao, as: 'opcoes' }]
-        });
+        // 2. Montar o objeto de estatísticas
+        const estatisticas = {
+            shows: totalShows,
+            musicas: totalMusicas,
+            conquistas: totalConquistas
+        };
+
+        // --- FIM DA CORREÇÃO ---
 
         const vitrine = {
             artista: { ...artista.toJSON(), aplausos: totalAplausos },
@@ -66,6 +66,7 @@ exports.obterVitrine = async (req, res, conexao, next) => {
             contatoPublico,
             postsRecentes,
             enqueteAtiva,
+            estatisticas, // 3. Adicionar as estatísticas ao objeto de resposta
         };
 
         return res.status(200).json(vitrine);
@@ -74,7 +75,6 @@ exports.obterVitrine = async (req, res, conexao, next) => {
         next(erro);
     }
 };
-
 // --- FUNÇÃO REESCRITA ---
 exports.registrarAplauso = async (req, res, conexao, next) => {
     try {
