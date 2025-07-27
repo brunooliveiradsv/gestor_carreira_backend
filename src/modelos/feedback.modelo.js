@@ -1,47 +1,33 @@
 // src/modelos/feedback.modelo.js
-const { DataTypes } = require('sequelize');
+const { Model, DataTypes } = require('sequelize');
 
-module.exports = (conexao) => {
-  const Feedback = conexao.define('Feedback', {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    // Chave estrangeira para o fã que enviou o feedback
-    fa_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'Fas', // O nome da sua tabela de fãs
-        key: 'id',
+class Feedback extends Model {
+  static init(conexao) {
+    super.init({
+      // As colunas da tabela são definidas aqui
+      nota: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        validate: {
+          min: 1,
+          max: 5,
+        },
       },
-    },
-    // Chave estrangeira para o artista que recebeu o feedback
-    artista_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'Usuarios', // O nome da sua tabela de artistas/utilizadores
-        key: 'id',
+      comentario: {
+        type: DataTypes.TEXT,
+        allowNull: true,
       },
-    },
-    nota: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      validate: {
-        min: 1,
-        max: 5,
-      },
-    },
-    comentario: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-    },
-  }, {
-    tableName: 'Feedbacks',
-    timestamps: true, // Adiciona os campos createdAt e updatedAt automaticamente
-  });
+    }, {
+      sequelize: conexao,
+      tableName: 'Feedbacks',
+    });
+  }
 
-  return Feedback;
-};
+  static associate(models) {
+    // Define as associações (relações) com outras tabelas
+    this.belongsTo(models.Fa, { foreignKey: 'fa_id', as: 'fa' });
+    this.belongsTo(models.Usuario, { foreignKey: 'artista_id', as: 'artista' });
+  }
+}
+
+module.exports = Feedback;
