@@ -19,7 +19,7 @@ module.exports = {
       artista_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
-        references: { model: 'Usuarios', key: 'id' },
+        references: { model: 'usuarios', key: 'id' },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
