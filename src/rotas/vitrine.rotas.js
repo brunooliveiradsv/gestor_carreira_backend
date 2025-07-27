@@ -27,9 +27,6 @@ module.exports = (conexao) => {
     (req, res, next) => vitrineControlador.obterMusicasMaisCurtidas(req, res, conexao, next)
   );
 
-  roteador.post('/enquetes/votar/:idOpcao', (req, res, next) => enqueteControlador.votarEmOpcao(req, res, conexao, next));
-
-  
   // --- ROTAS PROTEGIDAS (exigem login de fã) ---
   
   // Rota de aplauso
@@ -49,6 +46,12 @@ module.exports = (conexao) => {
   roteador.post('/musicas/:id/like',
     authFaMiddleware(conexao),
     (req, res, next) => vitrineControlador.likeMusica(req, res, conexao, next)
+  );
+
+  // ROTA DE VOTAÇÃO MOVIDA PARA AQUI
+  roteador.post('/enquetes/votar/:idOpcao', 
+    authFaMiddleware(conexao), // Middleware de autenticação de fã adicionado
+    (req, res, next) => enqueteControlador.votarEmOpcao(req, res, conexao, next)
   );
   
   return roteador;
