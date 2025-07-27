@@ -137,7 +137,6 @@ exports.criarUsuario = async (req, res, conexao) => {
       role,
       plano: 'free',
       status_assinatura: 'inativa',
-      teste_termina_em: null, // Garante que não há data de teste
     });
     // --- FIM DA CORREÇÃO ---
 
@@ -166,14 +165,12 @@ exports.gerenciarAssinatura = async (req, res, conexao) => {
       
       usuario.plano = plano;
       usuario.status_assinatura = 'ativa';
-      usuario.teste_termina_em = null;
       await usuario.save();
       return res.status(200).json({ mensagem: `Plano ${plano} concedido com sucesso para ${usuario.nome}.` });
 
     } else if (acao === 'remover') {
       usuario.plano = 'free';
       usuario.status_assinatura = 'ativa';
-      usuario.teste_termina_em = null;
       await usuario.save();
       return res.status(200).json({ mensagem: `Assinatura de ${usuario.nome} removida. O utilizador foi movido para o plano Free.` });
     
