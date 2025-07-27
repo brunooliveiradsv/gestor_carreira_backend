@@ -23,6 +23,7 @@ const EnqueteOpcao = require('../modelos/enquete_opcao.modelo');
 const Fa = require('../modelos/fa.modelo.js');
 const Interacao = require('../modelos/interacao.modelo.js');
 const MusicaFaLike = require('../modelos/musica_fa_like.modelo.js');
+const Feedback = require('../modelos/feedback.modelo.js'); // 1. IMPORTAR O NOVO MODELO
 
 const conexao = new Sequelize(dbConfig);
 
@@ -47,7 +48,8 @@ const modelos = [
   EnqueteOpcao,
   Fa,
   Interacao,
-  MusicaFaLike
+  MusicaFaLike,
+  Feedback // 2. ADICIONAR O MODELO À LISTA
 ];
 
 // Inicializa cada modelo, passando a conexão
