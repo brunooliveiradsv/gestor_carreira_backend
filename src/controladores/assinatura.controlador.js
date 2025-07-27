@@ -14,12 +14,18 @@ exports.criarSessaoCheckout = async (req, res, conexao) => {
   const { planoId } = req.body;
   const usuarioId = req.usuario.id;
 
-  const success_url = `${process.env.FRONTEND_URL}/configuracoes`; // Redireciona para configurações após sucesso
+  // --- ALTERAÇÃO AQUI ---
+  // Adicionado "?pagamento=sucesso" ao URL
+  const success_url = `${process.env.FRONTEND_URL}/configuracoes?pagamento=sucesso`;
   const cancel_url = `${process.env.FRONTEND_URL}/assinatura`;
 
   try {
+    if (!planoId) {
+        return res.status(400).json({ mensagem: "ID do plano não fornecido pelo frontend." });
+    }
+
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+      payment_method_types: ['card', 'pix'],
       mode: 'subscription',
       client_reference_id: usuarioId,
       line_items: [{
@@ -32,10 +38,11 @@ exports.criarSessaoCheckout = async (req, res, conexao) => {
 
     return res.json({ url: session.url });
   } catch (error) {
-    console.error("Erro ao criar sessão de checkout do Stripe:", error);
+    console.error("Erro CRÍTICO ao criar sessão de checkout do Stripe:", error.message);
     return res.status(500).json({ mensagem: "Não foi possível iniciar o pagamento." });
   }
 };
+
 
 exports.trocarPlano = async (req, res, conexao) => {
   const { Usuario } = conexao.models;
