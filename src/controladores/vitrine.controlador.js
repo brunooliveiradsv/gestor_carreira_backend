@@ -207,3 +207,22 @@ exports.obterRankingFas = async (req, res, conexao, next) => {
         next(erro);
     }
 };
+
+exports.obterLikesDoFa = async (req, res, conexao, next) => {
+    const { MusicaFaLike } = conexao.models;
+    const faId = req.fa.id; // ID do fã vem do token (authFaMiddleware)
+
+    try {
+        const likes = await MusicaFaLike.findAll({
+            where: { fa_id: faId },
+            attributes: ['musica_id'] // Só precisamos dos IDs das músicas
+        });
+
+        // Mapeia o resultado para um array simples de IDs
+        const idsDasMusicasCurtidas = likes.map(like => like.musica_id);
+
+        return res.status(200).json(idsDasMusicasCurtidas);
+    } catch (erro) {
+        next(erro);
+    }
+};

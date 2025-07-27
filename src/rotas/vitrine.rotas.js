@@ -53,6 +53,11 @@ module.exports = (conexao) => {
     authFaMiddleware(conexao), // Middleware de autenticação de fã adicionado
     (req, res, next) => enqueteControlador.votarEmOpcao(req, res, conexao, next)
   );
+
+  roteador.get('/meus-likes',
+    authFaMiddleware(conexao),
+    (req, res, next) => vitrineControlador.obterLikesDoFa(req, res, conexao, next)
+  );
   
   return roteador;
 };
