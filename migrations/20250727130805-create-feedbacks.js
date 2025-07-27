@@ -12,7 +12,7 @@ module.exports = {
       fa_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
-        references: { model: 'Fas', key: 'id' },
+        references: { model: 'fas', key: 'id' },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
