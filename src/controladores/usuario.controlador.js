@@ -176,43 +176,56 @@ exports.buscarPerfil = async (req, res, conexao, next) => {
   return res.status(200).json(perfil);
 };
 
-exports.atualizarPerfil = async (req, res, conexao, next) => {
+exports.atualizarNome = async (req, res, conexao, next) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
-  const { nome, email } = req.body;
+  const { nome } = req.body;
+
+  if (!nome) {
+    return res.status(400).json({ mensagem: "O nome é obrigatório." });
+  }
 
   try {
-    const dadosParaAtualizar = {};
-
-    if (nome) {
-      // Lógica de validação do nome, se houver
-      dadosParaAtualizar.nome = nome;
-    }
-
-    if (email) {
-      // Validação para garantir que o novo e-mail não está em uso por outra conta
-      const emailExistente = await Usuario.findOne({ 
-        where: { email, id: { [conexao.Sequelize.Op.ne]: usuarioId } } 
-      });
-      if (emailExistente) {
-        return res.status(400).json({ mensagem: "Este e-mail já está sendo utilizado por outra conta." });
-      }
-      dadosParaAtualizar.email = email;
-    }
-
-    if (Object.keys(dadosParaAtualizar).length === 0) {
-        return res.status(400).json({ mensagem: "Nenhum dado para atualizar foi fornecido." });
-    }
-
-    const [updated] = await Usuario.update(dadosParaAtualizar, { where: { id: usuarioId } });
+    const [updated] = await Usuario.update({ nome }, {
+      where: { id: usuarioId }
+    });
 
     if (updated) {
       const usuarioAtualizado = await Usuario.findByPk(usuarioId, { attributes: { exclude: ['senha'] } });
+      logService.registrarAcao(conexao, usuarioId, 'UPDATE_PROFILE_NAME', { new_name: nome });
       return res.status(200).json(usuarioAtualizado.get({ plain: true }));
     }
-
-    // Este caso é raro, mas é uma boa prática
+    
     return res.status(404).json({ mensagem: "Utilizador não encontrado." });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.atualizarEmail = async (req, res, conexao, next) => {
+  const { Usuario } = conexao.models;
+  const usuarioId = req.usuario.id;
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ mensagem: "O campo de e-mail é obrigatório." });
+  }
+
+  try {
+    const emailExistente = await Usuario.findOne({ where: { email, id: { [conexao.Sequelize.Op.ne]: usuarioId } } });
+    if (emailExistente) {
+      return res.status(400).json({ mensagem: "Este e-mail já está sendo utilizado por outra conta." });
+    }
+
+    const [updated] = await Usuario.update({ email }, { where: { id: usuarioId } });
+    
+    if (updated) {
+      const usuarioAtualizado = await Usuario.findByPk(usuarioId);
+      const { senha, ...perfil } = usuarioAtualizado.get({ plain: true });
+      logService.registrarAcao(conexao, usuarioId, 'UPDATE_PROFILE_EMAIL', { new_email: email });
+      return res.status(200).json(perfil);
+    }
+    return res.status(404).json({ mensagem: "Usuário não encontrado." });
 
   } catch (error) {
     next(error);
@@ -255,21 +268,16 @@ exports.atualizarSenha = async (req, res, conexao, next) => {
   }
 };
 
+// --- FUNÇÃO CORRIGIDA ---
 exports.atualizarFoto = async (req, res, conexao, next) => {
   const { Usuario } = conexao.models;
   const usuarioId = req.usuario.id;
-  
-  // --- CORREÇÃO AQUI ---
-  // Em vez de depender do req.body, que pode estar vazio em uploads,
-  // verificamos diretamente se req.file (do multer) existe.
-  const fotoUrlFinal = req.file ? req.file.path : null;
+
+  // Lógica mais segura: usa o req.file se existir, senão, tenta o req.body.foto_url
+  const fotoUrlFinal = req.file ? req.file.path : req.body?.foto_url;
 
   if (!fotoUrlFinal) {
-    // A lógica original para lidar com a ausência de um ficheiro
-    const { foto_url: fotoUrlFromBody } = req.body || {};
-    if (!fotoUrlFromBody) {
-        return res.status(400).json({ mensagem: 'Nenhum ficheiro ou URL de imagem foi fornecido.' });
-    }
+    return res.status(400).json({ mensagem: 'Nenhum ficheiro ou URL de imagem foi fornecido.' });
   }
 
   try {
