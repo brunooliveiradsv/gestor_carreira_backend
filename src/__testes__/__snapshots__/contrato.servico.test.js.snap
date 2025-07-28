@@ -1,0 +1,38 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Testes do Serviço de Geração de Contratos Deve gerar o texto do contrato corretamente 1`] = `
+"CONTRATO DE PRESTAÇÃO DE SERVIÇOS ARTÍSTICOS
+DAS PARTES
+CONTRATANTE: Prefeitura de Mirassol, portador(a) do CPF/CNPJ nº 12.345.678/0001-99, com morada em Rua Principal, 123, Centro, doravante designado(a) simplesmente como CONTRATANTE.
+CONTRATADO: Bruno Oliveira, músico(a) profissional, doravante designado(a) simplesmente como CONTRATADO.
+Cláusula 1ªª - DO OBJETO
+O presente contrato tem como objeto a apresentação musical do CONTRATADO no evento "Show Acústico na Praça", a ser realizado no dia 25 de dezembro de 2025.
+Cláusula 2ªª - DO LOCAL E HORÁRIO
+A apresentação ocorrerá no seguinte local: Praça da Matriz, Mirassol. O CONTRATADO deverá estar disponível no local com, no mínimo, 60 (sessenta) minutos de antecedência. A apresentação terá início previsto para as 17:00h.
+Cláusula 3ªª - DAS OBRIGAÇÕES DO CONTRATADO
+Compete ao CONTRATADO:
+- Realizar a apresentação musical conforme acordado, com duração aproximada a ser definida entre as partes.
+- Comparecer ao local do evento no horário estipulado, munido de seus instrumentos e equipamentos pessoais necessários à apresentação.
+- Zelar pela qualidade técnica e artística da apresentação.
+Cláusula 4ªª - DAS OBRIGAÇÕES DO CONTRATANTE
+Compete ao CONTRATANTE:
+- Disponibilizar um local seguro e adequado para o CONTRATADO se apresentar.
+- Garantir a segurança do CONTRATADO e de seus equipamentos durante todo o período de sua permanência no local do evento.
+- Efetuar o pagamento do cachê nos termos da Cláusula 5ª.
+Cláusula 5ªª - DO PAGAMENTO
+A título de remuneração (cachê), o CONTRATANTE pagará ao CONTRATADO o valor total de R$ 1.500,75. O pagamento deverá ser efetuado da seguinte forma: 50% adiantado, 50% no dia do evento..
+Cláusula 6ªª - DA RESCISÃO
+O cancelamento por qualquer uma das partes deverá ser comunicado com antecedência mínima de 15 (quinze) dias. O descumprimento desta cláusula por parte do CONTRATANTE implicará no pagamento de uma multa de 50% do valor total do cachê. Caso o cancelamento parta do CONTRATADO, este deverá restituir qualquer valor já recebido.
+Cláusula 7ªª - DAS DISPOSIÇÕES GERAIS
+O CONTRATANTE autoriza o uso de imagem e som da apresentação para fins de divulgação e portfólio do CONTRATADO. Este contrato não estabelece qualquer vínculo empregatício entre as partes, tratando-se de uma prestação de serviço autônoma.
+Cláusula 8ªª - DO FORO
+Fica eleito o foro da comarca de Mirassol, SP, para dirimir quaisquer dúvidas oriundas do presente contrato.
+Mirassol, 28 de julho de 2025.
+________________________________
+________________________________
+Prefeitura de Mirassol
+Bruno Oliveira
+CONTRATANTE
+CONTRATADO
+"
+`;

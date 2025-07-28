@@ -16,7 +16,6 @@ class MusicaFaLike extends Model {
       sequelize,
       tableName: 'musica_fa_likes',
       timestamps: true,
-      updatedAt: false,
     })
   }
 

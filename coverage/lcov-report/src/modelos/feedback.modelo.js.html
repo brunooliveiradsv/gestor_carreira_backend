@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for src/rotas/admin.rotas.js</title>
+    <title>Code coverage report for src/modelos/feedback.modelo.js</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../../prettify.css" />
     <link rel="stylesheet" href="../../base.css" />
@@ -19,13 +19,13 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/rotas</a> admin.rotas.js</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/modelos</a> feedback.modelo.js</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">88.88% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>24/27</span>
+                <span class='fraction'>5/5</span>
             </div>
         
             
@@ -37,16 +37,16 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">70% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>7/10</span>
+                <span class='fraction'>2/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>18/18</span>
+                <span class='fraction'>5/5</span>
             </div>
         
             
@@ -92,65 +92,74 @@
 <a name='L27'></a><a href='#L27'>27</a>
 <a name='L28'></a><a href='#L28'>28</a>
 <a name='L29'></a><a href='#L29'>29</a>
-<a name='L30'></a><a href='#L30'>30</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// src/rotas/admin.rotas.js
-const express = require('express');
-const adminControlador = require('../controladores/admin.controlador');
-// --- LINHA ADICIONADA ---
-const sugestaoControlador = require('../controladores/sugestao.controlador'); 
-const authMiddleware = require('../middlewares/autenticacao');
-const adminMiddleware = require('../middlewares/admin');
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15x</span></td><td class="text"><pre class="prettyprint lang-js">// src/modelos/feedback.modelo.js
+const { Model, DataTypes } = require('sequelize');
 &nbsp;
-module.exports = (conexao) =&gt; {
-  const roteador = express.Router();
+class Feedback extends Model {
+  static init(conexao) {
+    super.init({
+      // As colunas da tabela são definidas aqui
+      nota: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        validate: {
+          min: 1,
+          max: 5,
+        },
+      },
+      comentario: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+    }, {
+      sequelize: conexao,
+      tableName: 'feedbacks',
+    });
+  }
 &nbsp;
-  // Aplica a segurança em todas as rotas de admin
-  roteador.use(authMiddleware(conexao), adminMiddleware());
+  static associate(models) {
+    // Define as associações (relações) com outras tabelas
+    this.belongsTo(models.Fa, { foreignKey: 'fa_id', as: 'fa' });
+    this.belongsTo(models.Usuario, { foreignKey: 'artista_id', as: 'artista' });
+  }
+}
 &nbsp;
-  // --- Rotas de Gerenciamento de Usuários ---
-  roteador.get('/usuarios', (req, res) =&gt; adminControlador.listarUsuarios(req, res, conexao));
-  roteador.put('/usuarios/:id', (req, res) =&gt; adminControlador.atualizarUsuario(req, res, conexao));
-  roteador.delete('/usuarios/:id', (req, res) =&gt; adminControlador.apagarUsuario(req, res, conexao));
-  roteador.post('/usuarios', (req, res) =&gt; adminControlador.criarUsuario(req, res, conexao));
-  roteador.delete('/usuarios/:id/dados', <span class="fstat-no" title="function not covered" >(r</span>eq, res) =&gt; <span class="cstat-no" title="statement not covered" >adminControlador.limparDadosUsuario(req, res, conexao))</span>;
-&nbsp;
-roteador.put('/usuarios/:id/assinatura', (req, res) =&gt; adminControlador.gerenciarAssinatura(req, res, conexao));
-&nbsp;
-  // --- ROTAS DE MODERAÇÃO DE SUGESTÕES ---
-  roteador.get('/sugestoes', <span class="fstat-no" title="function not covered" >(r</span>eq, res) =&gt; <span class="cstat-no" title="statement not covered" >sugestaoControlador.listarSugestoesPendentes(req, res, conexao))</span>;
-  roteador.put('/sugestoes/:id/aprovar', (req, res) =&gt; sugestaoControlador.aprovarSugestao(req, res, conexao));
-  roteador.put('/sugestoes/:id/rejeitar', <span class="fstat-no" title="function not covered" >(r</span>eq, res) =&gt; <span class="cstat-no" title="statement not covered" >sugestaoControlador.rejeitarSugestao(req, res, conexao))</span>;
-  
-  return roteador;
-};</pre></td></tr></table></pre>
+module.exports = Feedback;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
             </div><!-- /wrapper -->
