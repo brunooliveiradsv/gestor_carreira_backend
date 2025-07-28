@@ -6,52 +6,73 @@ name: CI/CD - Teste e Deploy do Backend
 # Define o gatilho (trigger) para este workflow
 on:
   push:
-    # Executa apenas para pushes na branch 'main'. Mude para 'master' se for o seu caso.
+    # Executa apenas para pushes na branch 'main'.
     branches: [ main ]
 
 # Define os trabalhos (jobs) a serem executados
 jobs:
-  # O nosso job chama-se 'build-test-deploy'
   build-test-deploy:
-    # O tipo de máquina virtual que será usada. 'ubuntu-latest' é uma boa escolha padrão.
+    # O tipo de máquina virtual que será usada.
     runs-on: ubuntu-latest
 
     # Os passos que o nosso job irá executar em sequência
     steps:
       # 1. Checkout do código
-      # Descarrega o código do seu repositório para a máquina virtual
       - name: Checkout do Repositório
         uses: actions/checkout@v4
 
       # 2. Configurar o ambiente Node.js
-      # Instala a versão do Node.js que a sua aplicação usa
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18' # Use a versão do Node.js do seu ambiente
+          node-version: '18'
+          cache: 'npm' # Adiciona cache para acelerar instalações futuras
 
       # 3. Instalar as dependências
-      # Usa 'npm ci' que é mais rápido e seguro para ambientes de automação do que 'npm install'
       - name: Instalar Dependências
         run: npm ci
 
-      # 4. Executar os Testes (A parte de CI)
-      # Executa a sua suíte de testes completa. O job falhará aqui se algum teste falhar.
+      # 4. Executar os Testes (A parte de CI) - AGORA COM A CORREÇÃO
       - name: Executar Testes Automatizados
+        # ESTE BLOCO É A CORREÇÃO CRUCIAL
+        # Ele mapeia os segredos do GitHub para as variáveis de ambiente
+        # que a sua aplicação irá usar (process.env)
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_SECRET_FA: ${{ secrets.JWT_SECRET_FA }} # Não se esqueça deste!
+          
+          # Credenciais da Base de Dados
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_SSL_REQUIRED: ${{ secrets.DB_SSL_REQUIRED }}
+          
+          # Credenciais do Stripe (importantes para os testes de assinatura)
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_PRICE_ID_PADRAO_MENSAL: ${{ secrets.STRIPE_PRICE_ID_PADRAO_MENSAL }}
+          STRIPE_PRICE_ID_PADRAO_ANUAL: ${{ secrets.STRIPE_PRICE_ID_PADRAO_ANUAL }}
+          STRIPE_PRICE_ID_PREMIUM_MENSAL: ${{ secrets.STRIPE_PRICE_ID_PREMIUM_MENSAL }}
+          STRIPE_PRICE_ID_PREMIUM_ANUAL: ${{ secrets.STRIPE_PRICE_ID_PREMIUM_ANUAL }}
+          
         run: npm test
 
       # 5. Fazer o Deploy para o Servidor (A parte de CD)
-      # Este passo só será executado se todos os passos anteriores (incluindo os testes) forem bem-sucedidos.
-      # NOTA: Esta é uma implementação genérica usando SSH. Adapte para o seu provedor de alojamento.
       - name: Deploy para Servidor de Produção
+        # Este 'if' garante que o deploy só acontece se estivermos na branch 'main'
+        # e se os testes passaram.
+        if: github.ref == 'refs/heads/main'
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.DEPLOY_HOST }}         # O endereço IP ou domínio do seu servidor
-          username: ${{ secrets.DEPLOY_USER }}     # O utilizador para login SSH (ex: ubuntu, root)
-          key: ${{ secrets.DEPLOY_KEY }}          # A sua chave privada SSH para acesso sem senha
-          port: 22   # A porta SSH (padrão é 22)
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          port: 22
           script: |
             cd /caminho/para/seu/projeto/no/servidor
             git pull origin main
             npm install --production
-            pm2 restart nome_da_sua_app # Exemplo usando PM2 para reiniciar a aplicação sem downtime
+            pm2 restart nome_da_sua_app
